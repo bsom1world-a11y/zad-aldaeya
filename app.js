@@ -237,7 +237,7 @@ $("btn-del").addEventListener("click", function(){
 $("btn-brief").addEventListener("click", function(){
   var body=$("ed-body").value;
   var lines=body.split("\n").map(function(l){return l.trim();}).filter(Boolean);
-  var heads=lines.filter(function(l){return /^(\d+[).\-]|[-•*]|#{1,3}\s/.test(l) || l.length<90;}).slice(0,30);
+  var heads=lines.filter(function(l){return /^\d+[).\-.]\s|^[-•*]\s|^#{1,3}\s/.test(l) || l.length<90;}).slice(0,30);
   if(heads.length<5) heads=lines.slice(0,20);
   var brief="نقاط الإلقاء — "+$("ed-title").textContent+"\n("+ $("ed-meta").textContent +")\n\n"
     + heads.map(function(h){return "• "+h.replace(/^#{1,3}\s*/,"");}).join("\n")
