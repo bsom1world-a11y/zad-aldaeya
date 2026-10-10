@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>زاد الداعية | إعداد المحاضرات الدعوية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">ز</div>
+      <div>
+        <div class="brand-name">زاد الداعية</div>
+        <div class="brand-sub">إعداد المحاضرات الدعوية</div>
+      </div>
+    </div>
+    <nav id="nav">
+      <button class="nav-item active" data-view="home">🏠 الرئيسية</button>
+      <button class="nav-item" data-view="new">✍️ محاضرة جديدة</button>
+      <button class="nav-item" data-view="my">📚 محاضراتي <span id="count-badge" class="count"></span></button>
+      <button class="nav-item" data-view="settings">⚙️ الإعدادات</button>
+    </nav>
+    <div class="side-foot">
+      <p class="foot-note">الضبط العلمي: القرآن والسنة الصحيحة بفهم أهل العلم. ما لم يُتحقق منه يُوسم بـ «يحتاج إلى مراجعة».</p>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header id="topbar">
+      <button id="menu-btn" aria-label="القائمة">☰</button>
+      <div id="crumb">الرئيسية</div>
+    </header>
+
+    <main id="view">
+      <!-- الرئيسية -->
+      <section id="view-home" class="view">
+        <div class="hero card">
+          <h1 class="hero-title">مرحبًا بكِ في زاد الداعية 🌿</h1>
+          <p class="hero-sub">مساعدكِ في إعداد المحاضرات والدروس والندوات الشرعية بطريقة علمية منظمة وجذابة، مع العناية بصحة الأدلة وسلامة التأصيل.</p>
+          <div class="hero-steps">
+            <div class="step"><span>1</span> أدخلي بيانات اللقاء</div>
+            <div class="step"><span>2</span> فعّلي خدمة الذكاء الاصطناعي</div>
+            <div class="step"><span>3</span> راجعي المسودة وعدّليها واحفظيها</div>
+          </div>
+          <button id="go-new" class="btn-primary">إنشاء محاضرة جديدة +</button>
+          <p class="hint">تُحفظ محاضراتكِ محليًا في متصفحكِ في هذه النسخة، ولا يُعرض أي محتوى وهمي.</p>
+          <div id="ai-status-home"></div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <h3>📋 منهجية الإعداد</h3>
+            <ol class="nice-list">
+              <li>مقدمة جذابة مرتبطة بالموضوع</li>
+              <li>أهداف واضحة ومحاور منظمة</li>
+              <li>أدلة صحيحة موثقة بالسورة والرقم والتخريج</li>
+              <li>أقوال العلماء المعتبرين بمصادرها</li>
+              <li>تطبيقات عملية وأسئلة تفاعلية وخاتمة مؤثرة</li>
+            </ol>
+          </div>
+          <div class="card">
+            <h3>🛡️ الضبط العلمي</h3>
+            <ul class="nice-list">
+              <li>الاعتماد على القرآن والسنة الصحيحة.</li>
+              <li>الاستفادة من مؤلفات ابن تيمية وابن القيم وابن باز وابن عثيمين وغيرهم.</li>
+              <li>لا يُنسب حديث أو قول لمصدر دون تحقق.</li>
+              <li>ما تعذّر التحقق منه يُوسم: <span class="badge warn">يحتاج إلى مراجعة</span></li>
+              <li>تُجتنب القصص المكذوبة والأحاديث الضعيفة غير المبيّنة.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- محاضرة جديدة -->
+      <section id="view-new" class="view hidden">
+        <h2 class="ptitle">إنشاء محاضرة جديدة</h2>
+        <p class="sub">املئي الحقول التالية ثم اضغطي «إعداد المحاضرة».</p>
+        <div class="card">
+          <label class="lbl" for="f-title">عنوان المحاضرة *</label>
+          <input id="f-title" class="inp" placeholder="مثال: الصبر عند البلاء، بر الوالدين، حجاب المؤمنة...">
+
+          <div class="grid2">
+            <div>
+              <label class="lbl" for="f-audience">الفئة المستهدفة</label>
+              <select id="f-audience" class="sel">
+                <option>نساء</option>
+                <option>أمهات</option>
+                <option>فتيات</option>
+                <option>طالبات</option>
+                <option>عامة الناس</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl" for="f-duration">مدة المحاضرة</label>
+              <select id="f-duration" class="sel">
+                <option value="10">10 دقائق</option>
+                <option value="20" selected>20 دقيقة</option>
+                <option value="30">30 دقيقة</option>
+                <option value="45">45 دقيقة</option>
+                <option value="60">60 دقيقة</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid2">
+            <div>
+              <label class="lbl" for="f-type">نوع اللقاء</label>
+              <select id="f-type" class="sel">
+                <option>محاضرة</option>
+                <option>درس علمي</option>
+                <option>ندوة</option>
+                <option>كلمة قصيرة</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl" for="f-style">أسلوب العرض</label>
+              <select id="f-style" class="sel">
+                <option>علمي تأصيلي</option>
+                <option>تربوي مؤثر</option>
+                <option>حواري تفاعلي</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="lbl" for="f-notes">ملاحظات أو محاور ترغبين في إضافتها</label>
+          <textarea id="f-notes" class="ta" placeholder="اكتبي هنا أي محاور أو أسئلة أو مواقف تريدين تغطيتها..."></textarea>
+
+          <div class="actions-row">
+            <button id="btn-generate" class="btn-primary">إعداد المحاضرة ✨</button>
+            <button id="btn-clear" class="btn-line">مسح الحقول</button>
+          </div>
+          <div id="gen-status"></div>
+        </div>
+      </section>
+
+      <!-- محاضراتي -->
+      <section id="view-my" class="view hidden">
+        <h2 class="ptitle">محاضراتي المحفوظة</h2>
+        <p class="sub">محفوظة محليًا في متصفحكِ. ابحثي وافتحي وعدّلي وصدّري.</p>
+        <div class="toolbar">
+          <input id="search" class="inp" placeholder="🔍 البحث عن محاضرة محفوظة...">
+          <button id="btn-export-all" class="btn-line">تنزيل نسخة احتياطية</button>
+        </div>
+        <div id="lecture-list"></div>
+      </section>
+
+      <!-- عرض / تحرير محاضرة -->
+      <section id="view-editor" class="view hidden">
+        <button id="back-to-list" class="btn-line">→ رجوع لمحاضراتي</button>
+        <h2 id="ed-title" class="ptitle"></h2>
+        <p id="ed-meta" class="sub"></p>
+        <div id="review-flag"></div>
+        <div class="card">
+          <label class="lbl" for="ed-body">نص المحاضرة (قابل للتعديل)</label>
+          <textarea id="ed-body" class="ta big"></textarea>
+          <div class="actions-row wrap">
+            <button id="btn-save" class="btn-primary">💾 حفظ</button>
+            <button id="btn-copy" class="btn-line">📋 نسخ المحتوى</button>
+            <button id="btn-word" class="btn-line">📄 تصدير Word</button>
+            <button id="btn-print" class="btn-line">🖨️ تصدير PDF / طباعة</button>
+            <button id="btn-brief" class="btn-gold">⚡ إنشاء نسخة مختصرة للإلقاء</button>
+            <button id="btn-del" class="btn-danger">🗑️ حذف</button>
+          </div>
+        </div>
+        <div id="brief-wrap" class="card hidden">
+          <h3>🗂️ النسخة المختصرة (نقاط للإلقاء)</h3>
+          <div id="brief-out" class="brief"></div>
+          <div class="actions-row">
+            <button id="btn-copy-brief" class="btn-line">نسخ النقاط</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- الإعدادات -->
+      <section id="view-settings" class="view hidden">
+        <h2 class="ptitle">الإعدادات — خدمة الذكاء الاصطناعي</h2>
+        <p class="sub">زر «إعداد المحاضرة» لا يعرض نصوصًا ثابتة أو وهمية. لن يعمل التوليد حتى تُفعّل الخدمة أدناه.</p>
+        <div class="card">
+          <div class="alert">
+            <b>🔒 تنبيه أمني:</b> لا تضعي مفتاح API مباشرة في المتصفح في موقع منشور.
+            الطريقة الآمنة: خادم وسيط (انظري ملف <code>server-example.js</code>) يحفظ المفتاح،
+            وهنا تضعين فقط رابط الخادم الوسيط. الحقل الاختياري للمفتاح المباشر مخصّص للتجربة المحلية على جهازكِ فقط.
+          </div>
+          <label class="lbl" for="s-endpoint">رابط خدمة التوليد (AI Endpoint)</label>
+          <input id="s-endpoint" class="inp" dir="ltr" placeholder="https://your-server.example/api/generate">
+          <label class="lbl" for="s-model">اسم النموذج (اختياري)</label>
+          <input id="s-model" class="inp" dir="ltr" placeholder="مثال: gpt-4o-mini">
+          <label class="lbl" for="s-key">مفتاح API مباشر — للتجربة المحلية فقط (اختياري)</label>
+          <input id="s-key" type="password" class="inp" dir="ltr" placeholder="يُحفظ في متصفحكِ فقط، ولا يُستخدم إلا إذا لم يوجد خادم وسيط">
+          <label class="lbl" for="s-base">الرابط الأساسي المتوافق مع OpenAI (يُستخدم مع المفتاح المباشر فقط)</label>
+          <input id="s-base" class="inp" dir="ltr" placeholder="https://api.openai.com/v1">
+          <div class="actions-row">
+            <button id="btn-save-settings" class="btn-primary">حفظ الإعدادات</button>
+            <button id="btn-test-ai" class="btn-line">اختبار الاتصال</button>
+          </div>
+          <div id="settings-status"></div>
+        </div>
+        <div class="card">
+          <h3>كيف أفعّل الخدمة؟</h3>
+          <ol class="nice-list">
+            <li>شغّلي الخادم الوسيط المرفق (<code>server-example.js</code>) وضعي فيه مفتاح API سرًا.</li>
+            <li>الصقي رابط الخادم في حقل «رابط خدمة التوليد» أعلاه ثم احفظي.</li>
+            <li>عودي إلى «محاضرة جديدة» واضغطي «إعداد المحاضرة».</li>
+          </ol>
+          <p class="hint">بدون تفعيل الخدمة ستظهر رسالة واضحة تطلب التفعيل، ولن يُعرض أي محتوى مختلق.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="print-area" class="hidden"></div>
+<div id="toasts"></div>
+<script src="app.js"></script>
+</body>
+</html>
