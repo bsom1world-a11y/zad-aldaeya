@@ -1,6 +1,19 @@
-/* زاد الداعية — نسخة عاملة بسيطة، حفظ محلي، توليد عبر خدمة AI مفعّلة فقط */
+/* زاد الداعية — نسخة عاملة بسيطة، حفظ محلي، توليد عبر خدمة AI مفعّلة فقط (v1.1) */
 (function(){
 "use strict";
+
+/* إظهار أي خطأ تشغيلي كرسالة مرئية بدل الفشل الصامت */
+window.addEventListener("error", function(e){
+  try{
+    var box = document.getElementById("toasts");
+    if(box){
+      var t = document.createElement("div");
+      t.className = "toast";
+      t.textContent = "حدث خطأ في الصفحة: " + (e.message || "غير معروف") + " — حدّثي الصفحة بـ Ctrl+Shift+R وأخبرينا بهذه الرسالة.";
+      box.appendChild(t);
+    }
+  }catch(_){}
+});
 var LS_LECTURES = "zad_lectures_v1";
 var LS_SETTINGS = "zad_settings_v1";
 
@@ -17,8 +30,10 @@ function fmtDate(ts){ try{ return new Date(ts).toLocaleString("ar"); }catch(e){ 
 /* ---------- التنقل ---------- */
 var crumbMap = { home:"الرئيسية", "new":"محاضرة جديدة", my:"محاضراتي", settings:"الإعدادات", editor:"عرض المحاضرة" };
 function show(view){
-  ["home","new","my","settings","editor"].forEach(function(v){ $("view-"+v).classList.add("hidden"); });
-  $("view-"+view).classList.remove("hidden");
+  var target = $("view-"+view);
+  if(!target){ toast("تعذّر فتح الصفحة المطلوبة. حدّثي الصفحة بـ Ctrl+Shift+R وحاولي مجددًا."); return; }
+  ["home","new","my","settings","editor"].forEach(function(v){ var s=$("view-"+v); if(s) s.classList.add("hidden"); });
+  target.classList.remove("hidden");
   document.querySelectorAll(".nav-item").forEach(function(b){ b.classList.toggle("active", b.dataset.view===view); });
   $("crumb").textContent = crumbMap[view]||view;
   $("sidebar").classList.remove("open");
@@ -26,11 +41,17 @@ function show(view){
   if(view==="home") renderAiStatus();
   window.scrollTo(0,0);
 }
+function on(id, fn){
+  var el = $(id);
+  if(el){ el.addEventListener("click", fn); return true; }
+  toast("تعذّر تهيئة زر ("+id+"). حدّثي الصفحة بـ Ctrl+Shift+R.");
+  return false;
+}
 document.querySelectorAll(".nav-item").forEach(function(b){ b.addEventListener("click", function(){ show(b.dataset.view); }); });
-$("go-new").addEventListener("click", function(){ show("new"); });
-$("menu-btn").addEventListener("click", function(){ $("sidebar").classList.toggle("open"); });
-$("back-to-list").addEventListener("click", function(){ show("my"); });
-$("btn-clear").addEventListener("click", function(){ ["f-title","f-notes"].forEach(function(id){$(id).value="";}); });
+on("go-new", function(){ show("new"); });
+on("menu-btn", function(){ $("sidebar").classList.toggle("open"); });
+on("back-to-list", function(){ show("my"); });
+on("btn-clear", function(){ ["f-title","f-notes"].forEach(function(id){$(id).value="";}); });
 
 function renderCount(){ var n=loadLectures().length; $("count-badge").textContent = n?("("+n+")"):""; }
 function renderAiStatus(){
