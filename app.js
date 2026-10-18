@@ -862,4 +862,55 @@ on("lib-addlect-back", showLibrary);
 on("lib-btn-confirm-add", libConfirmAddToLecture);
 on("lib-btn-create-new-lecture", libCreateLectureFromTopic);
 on("lib-btn-cancel-add", showLibrary);
+
+/* ---------- النسخ الاحتياطي والاستعادة الكاملة ---------- */
+function backupAll(){
+  var data = {
+    version: "zad-backup-v1",
+    exportedAt: new Date().toISOString(),
+    lectures: loadLectures(),
+    librarySources: loadLibrarySources(),
+    libraryTopics: loadLibraryTopics(),
+    settings: loadSettings()
+  };
+  var blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "zad-backup-" + new Date().toISOString().slice(0,10) + ".json";
+  a.click();
+  toast("تم تنزيل النسخة الاحتياطية ✓");
+}
+
+function restoreAll(file){
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      var data = JSON.parse(e.target.result);
+      if(!data.version || data.version !== "zad-backup-v1"){
+        throw new Error("ملف غير مدعوم");
+      }
+      if(confirm("سيتم استبدال جميع بياناتك الحالية بالبيانات من النسخة الاحتياطية. متابعة؟")){
+        if(data.lectures) saveLectures(data.lectures);
+        if(data.librarySources) saveLibrarySources(data.librarySources);
+        if(data.libraryTopics) saveLibraryTopics(data.libraryTopics);
+        if(data.settings) saveSettings(data.settings);
+        toast("تم الاستعادة بنجاح ✓ — حدّثي الصفحة الآن");
+        setTimeout(function(){ location.reload(); }, 1000);
+      }
+    }catch(err){
+      $("backup-status").innerHTML = '<div class="status-err">فشل الاستعادة: ' + esc(err.message) + '</div>';
+    }
+  };
+  reader.readAsText(file);
+}
+
+on("btn-backup-all", backupAll);
+on("btn-restore-all", function(){ $("file-restore").click(); });
+$("file-restore").addEventListener("change", function(){
+  if(this.files && this.files[0]) restoreAll(this.files[0]);
+  this.value = "";
+});
+
+/* ---------- تهيئة ---------- */
+renderCount(); fillSettings(); renderAiStatus(); renderList(""); show("home");
 })();

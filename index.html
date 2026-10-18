@@ -201,6 +201,16 @@
           <div id="settings-status"></div>
         </div>
         <div class="card">
+          <h3>💾 النسخ الاحتياطي والاستعادة</h3>
+          <p class="sub">جميع بياناتك (المحاضرات، المكتبة، الإعدادات) محفوظة في متصفحك فقط. يمكنك تنزيل نسخة احتياطية أو استعادتها لاحقًا.</p>
+          <div class="actions-row wrap">
+            <button id="btn-backup-all" class="btn-primary">📥 تنزيل نسخة احتياطية كاملة</button>
+            <button id="btn-restore-all" class="btn-line">📤 استعادة من نسخة احتياطية</button>
+          </div>
+          <input id="file-restore" type="file" class="hidden" accept=".json">
+          <div id="backup-status"></div>
+        </div>
+        <div class="card">
           <h3>كيف أفعّل الخدمة؟</h3>
           <ol class="nice-list">
             <li>شغّلي الخادم الوسيط المرفق (<code>server-example.js</code>) وضعي فيه مفتاح API سرًا.</li>
