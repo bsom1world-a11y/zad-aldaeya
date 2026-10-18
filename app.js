@@ -32,7 +32,7 @@ var crumbMap = { home:"الرئيسية", "new":"محاضرة جديدة", my:"�
 function show(view){
   var target = $("view-"+view);
   if(!target){ toast("تعذّر فتح الصفحة المطلوبة. حدّثي الصفحة بـ Ctrl+Shift+R وحاولي مجددًا."); return; }
-  ["home","new","my","settings","editor"].forEach(function(v){ var s=$("view-"+v); if(s) s.classList.add("hidden"); });
+  ["home","new","my","settings","editor","library-source-editor","library-topic-editor","library-add-to-lecture"].forEach(function(v){ var s=$("view-"+v); if(s) s.classList.add("hidden"); });
   target.classList.remove("hidden");
   document.querySelectorAll(".nav-item").forEach(function(b){ b.classList.toggle("active", b.dataset.view===view); });
   $("crumb").textContent = crumbMap[view]||view;
@@ -47,7 +47,9 @@ function on(id, fn){
   toast("تعذّر تهيئة زر ("+id+"). حدّثي الصفحة بـ Ctrl+Shift+R.");
   return false;
 }
-document.querySelectorAll(".nav-item").forEach(function(b){ b.addEventListener("click", function(){ show(b.dataset.view); }); });
+document.querySelectorAll(".nav-item").forEach(function(b){ b.addEventListener("click", function(){
+  if(b.dataset.view === "library"){ showLibrary(); } else { show(b.dataset.view); }
+}); });
 on("go-new", function(){ show("new"); });
 on("menu-btn", function(){ $("sidebar").classList.toggle("open"); });
 on("back-to-list", function(){ show("my"); });
@@ -274,4 +276,590 @@ $("btn-test-ai").addEventListener("click", async function(){
 
 /* ---------- تهيئة ---------- */
 renderCount(); fillSettings(); renderAiStatus(); renderList(""); show("home");
+
+/* ========================================================================
+   المكتبة الدعوية الذكية — Phase 1 (بدون مساعد ذكاء اصطناعي أو استخراج PDF)
+   ======================================================================== */
+var LS_LIB_SOURCES = "zad_library_sources_v1";
+var LS_LIB_TOPICS = "zad_library_topics_v1";
+
+function loadLibrarySources(){ try{ return JSON.parse(localStorage.getItem(LS_LIB_SOURCES)||"[]"); }catch(e){ return []; } }
+function saveLibrarySources(a){ localStorage.setItem(LS_LIB_SOURCES, JSON.stringify(a)); }
+function loadLibraryTopics(){ try{ return JSON.parse(localStorage.getItem(LS_LIB_TOPICS)||"[]"); }catch(e){ return []; } }
+function saveLibraryTopics(a){ localStorage.setItem(LS_LIB_TOPICS, JSON.stringify(a)); }
+
+var libState = {
+  view: "sources", // "sources" | "topics"
+  sectionFilter: "",
+  typeFilter: "",
+  favOnly: false,
+  search: "",
+  editingSourceId: null,
+  editingTopicId: null,
+  addToLectureTarget: null, // {type:"source"|"topic", id}
+  addToLectureItem: null
+};
+
+/* ---------- التنقل للمكتبة ---------- */
+crumbMap.library = "المكتبة الدعوية";
+
+function showLibrary(){
+  show("library");
+  renderLibraryCategories();
+  renderLibraryRecent();
+  renderLibrarySources();
+  renderLibraryTopics();
+}
+
+function renderLibraryCategories(){
+  var cats = [
+    { key:"القرآن الكريم والتفسير", label:"📖 القرآن الكريم والتفسير" },
+    { key:"السنة النبوية وشروح الأحاديث", label:"🕋 السنة النبوية وشروح الأحاديث" },
+    { key:"العقيدة والتوحيد", label:"🌟 العقيدة والتوحيد" },
+    { key:"الفقه والأحكام الشرعية", label:"⚖️ الفقه والأحكام الشرعية" },
+    { key:"التربية الإيمانية والسلوك", label:"🌱 التربية الإيمانية والسلوك" },
+    { key:"أقوال العلماء والفوائد العلمية", label:"👨‍🏫 أقوال العلماء والفوائد العلمية" },
+    { key:"الموضوعات الدعوية المعاصرة", label:"📢 الموضوعات الدعوية المعاصرة" }
+  ];
+  var box = $("lib-categories");
+  box.innerHTML = "";
+  cats.forEach(function(c){
+    var el = document.createElement("div");
+    el.className = "category-card" + (libState.sectionFilter === c.key ? " active" : "");
+    el.textContent = c.label;
+    el.onclick = function(){
+      libState.sectionFilter = (libState.sectionFilter === c.key) ? "" : c.key;
+      renderLibraryCategories();
+      renderLibrarySources();
+    };
+    box.appendChild(el);
+  });
+}
+
+function renderLibraryRecent(){
+  var box = $("lib-recent");
+  var sources = loadLibrarySources();
+  var topics = loadLibraryTopics();
+  var all = [];
+  sources.forEach(function(s){ all.push({ type:"source", item:s, ts:s.updatedAt || s.createdAt }); });
+  topics.forEach(function(t){ all.push({ type:"topic", item:t, ts:t.updatedAt || t.createdAt }); });
+  all.sort(function(a,b){ return b.ts - a.ts; });
+  all = all.slice(0, 5);
+  if(!all.length){ box.innerHTML = '<div class="empty">لا توجد مواد تم استخدامها سابقًا بعد.</div>'; return; }
+  box.innerHTML = "";
+  all.forEach(function(entry){
+    var div = document.createElement("div");
+    div.className = "library-item";
+    var it = entry.item;
+    var meta = entry.type === "source"
+      ? (it.author ? it.author + " • " : "") + it.type + " • " + it.section
+      : (it.axes && it.axes.length ? it.axes.length + " محاور" : "") + " • موضوع";
+    div.innerHTML =
+      '<div><h4>' + esc(it.title) + '</h4><div class="source-meta">' + esc(meta) + '</div></div>' +
+      '<div class="row-btns">' +
+      '<button class="btn-line btn-sm" onclick="libOpenItem(\'' + entry.type + '\',\'' + it.id + '\')">فتح</button>' +
+      '<button class="btn-line btn-sm" onclick="libAddToLecture(\'' + entry.type + '\',\'' + it.id + '\')">إضافة إلى محاضرة</button>' +
+      '</div>';
+    box.appendChild(div);
+  });
+}
+
+function renderLibrarySources(){
+  var box = $("lib-sources-list");
+  var sources = loadLibrarySources();
+  var q = libState.search.toLowerCase();
+  sources = sources.filter(function(s){
+    var matchText = (s.title + " " + (s.author||"") + " " + (s.notes||"") + " " + (s.keywords||"") + " " + (s.quotedText||"")).toLowerCase();
+    var textOk = !q || matchText.includes(q);
+    var sectionOk = !libState.sectionFilter || s.section === libState.sectionFilter;
+    var typeOk = !libState.typeFilter || s.type === libState.typeFilter;
+    var favOk = !libState.favOnly || s.favorite;
+    return textOk && sectionOk && typeOk && favOk;
+  });
+  sources.sort(function(a,b){ return (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt); });
+  if(!sources.length){ box.innerHTML = '<div class="empty">لا توجد مصادر مطابقة. أضيفي مصدرًا جديدًا لتبدأ.</div>'; return; }
+  box.innerHTML = "";
+  sources.forEach(function(s){
+    var div = document.createElement("div");
+    div.className = "library-item";
+    var meta = (s.author ? esc(s.author) + " • " : "") + esc(s.type) + " • " + esc(s.section);
+    if(s.volume || s.page) meta += " • الجزء: " + esc(s.volume||"") + " صفحة: " + esc(s.page||"");
+    div.innerHTML =
+      '<div><h4>' + esc(s.title) + '</h4><div class="source-meta">' + meta + '</div>' +
+      (s.quotedText ? '<div class="source-body">' + esc(s.quotedText) + '</div>' : '') +
+      '</div>' +
+      '<div class="row-btns">' +
+      '<span class="fav-star ' + (s.favorite ? "filled" : "") + '" title="المفضلة" onclick="libToggleFavSource(\'' + s.id + '\')">' + (s.favorite ? "★" : "☆") + '</span>' +
+      '<button class="btn-line btn-sm" onclick="libEditSource(\'' + s.id + '\')">تعديل</button>' +
+      '<button class="btn-line btn-sm" onclick="libAddToLecture(\'source\',\'' + s.id + '\')">إضافة إلى محاضرة</button>' +
+      '<button class="btn-danger btn-sm" onclick="libDeleteSource(\'' + s.id + '\')">حذف</button>' +
+      '</div>';
+    box.appendChild(div);
+  });
+}
+
+function renderLibraryTopics(){
+  var box = $("lib-topics-list");
+  var topics = loadLibraryTopics();
+  var q = libState.search.toLowerCase();
+  topics = topics.filter(function(t){
+    var matchText = (t.title + " " + (t.idea||"") + " " + (t.reflections||"")).toLowerCase();
+    return !q || matchText.includes(q);
+  });
+  topics.sort(function(a,b){ return (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt); });
+  if(!topics.length){ box.innerHTML = '<div class="empty">لا توجد ملفات موضوعات بعد. أنشئي ملفًا جديدًا.</div>'; return; }
+  box.innerHTML = "";
+  topics.forEach(function(t){
+    var axesCount = t.axes ? t.axes.length : 0;
+    var evidencesCount = t.evidences ? t.evidences.length : 0;
+    var linkedCount = t.sourceIds ? t.sourceIds.length : 0;
+    var div = document.createElement("div");
+    div.className = "topic-item";
+    div.innerHTML =
+      '<div><h4>' + esc(t.title) + '</h4><div class="source-meta">' +
+      axesCount + ' محاور • ' + evidencesCount + ' أدلة • ' + linkedCount + ' مصدر مرتبط' +
+      '</div><div class="topic-body">' + esc((t.idea||"").substring(0,120)) + (t.idea && t.idea.length>120?"...":"") + '</div></div>' +
+      '<div class="row-btns">' +
+      '<button class="btn-line btn-sm" onclick="libOpenItem(\'topic\',\'' + t.id + '\')">فتح</button>' +
+      '<button class="btn-line btn-sm" onclick="libCreateLectureFromTopic(\'' + t.id + '\')">إنشاء محاضرة من هذا الموضوع</button>' +
+      '<button class="btn-line btn-sm" onclick="libEditTopic(\'' + t.id + '\')">تعديل</button>' +
+      '<button class="btn-danger btn-sm" onclick="libDeleteTopic(\'' + t.id + '\')">حذف</button>' +
+      '</div>';
+    box.appendChild(div);
+  });
+}
+
+/* ---------- محرر المصدر ---------- */
+function libOpenSourceEditor(id){
+  libState.editingSourceId = id;
+  $("view-library").classList.add("hidden");
+  $("view-library-source-editor").classList.remove("hidden");
+  $("lib-source-editor-title").textContent = id ? "تعديل المصدر" : "إضافة مصدر جديد";
+  $("lib-btn-delete-source").classList.toggle("hidden", !id);
+  $("lib-source-id").value = id || "";
+  ["lib-source-title","lib-source-author","lib-source-link","lib-source-volume","lib-source-page","lib-source-quoted","lib-source-notes","lib-source-keywords"].forEach(function(fid){
+    $(fid).value = "";
+  });
+  $("lib-source-type").value = "كتاب";
+  $("lib-source-section").value = "الفقه والأحكام الشرعية";
+  if(id){
+    var s = loadLibrarySources().find(function(x){ return x.id === id; });
+    if(s){
+      $("lib-source-title").value = s.title||"";
+      $("lib-source-author").value = s.author||"";
+      $("lib-source-type").value = s.type||"كتاب";
+      $("lib-source-section").value = s.section||"الفقه والأحكام الشرعية";
+      $("lib-source-link").value = s.link||"";
+      $("lib-source-volume").value = s.volume||"";
+      $("lib-source-page").value = s.page||"";
+      $("lib-source-quoted").value = s.quotedText||"";
+      $("lib-source-notes").value = s.notes||"";
+      $("lib-source-keywords").value = s.keywords||"";
+    }
+  }
+  $("lib-source-status").innerHTML = "";
+  window.scrollTo(0,0);
+}
+
+function libSaveSource(){
+  var id = $("lib-source-id").value.trim();
+  var s = {
+    id: id || uid(),
+    title: $("lib-source-title").value.trim(),
+    author: $("lib-source-author").value.trim(),
+    type: $("lib-source-type").value,
+    section: $("lib-source-section").value,
+    link: $("lib-source-link").value.trim(),
+    volume: $("lib-source-volume").value.trim(),
+    page: $("lib-source-page").value.trim(),
+    quotedText: $("lib-source-quoted").value.trim(),
+    notes: $("lib-source-notes").value.trim(),
+    keywords: $("lib-source-keywords").value.trim(),
+    favorite: id ? (loadLibrarySources().find(function(x){return x.id===id;})||{}).favorite : false,
+    createdAt: id ? (loadLibrarySources().find(function(x){return x.id===id;})||{}).createdAt : Date.now(),
+    updatedAt: Date.now()
+  };
+  if(!s.title){ $("lib-source-status").innerHTML = '<div class="status-err"> فضلًا أدخل عنوان المصدر.</div>'; return; }
+  var arr = loadLibrarySources();
+  var idx = arr.findIndex(function(x){ return x.id === s.id; });
+  if(idx >= 0) arr[idx] = s; else arr.push(s);
+  saveLibrarySources(arr);
+  showLibrary();
+  toast(id ? "تم تعديل المصدر ✓" : "تم إضافة المصدر ✓");
+}
+
+function libDeleteSource(id){
+  if(!confirm("هل أنت متأكدة من حذف هذا المصدر؟")) return;
+  var arr = loadLibrarySources().filter(function(x){ return x.id !== id; });
+  saveLibrarySources(arr);
+  // أيضاً احذف الربط من المواضيع
+  var topics = loadLibraryTopics();
+  topics.forEach(function(t){
+    if(t.sourceIds) t.sourceIds = t.sourceIds.filter(function(sid){ return sid !== id; });
+  });
+  saveLibraryTopics(topics);
+  showLibrary();
+  toast("تم حذف المصدر ✓");
+}
+
+function libToggleFavSource(id){
+  var arr = loadLibrarySources();
+  var s = arr.find(function(x){ return x.id === id; });
+  if(s){ s.favorite = !s.favorite; saveLibrarySources(arr); renderLibrarySources(); }
+}
+
+/* ---------- محرر ملف الموضوع ---------- */
+function libOpenTopicEditor(id){
+  libState.editingTopicId = id;
+  $("view-library").classList.add("hidden");
+  $("view-library-topic-editor").classList.remove("hidden");
+  $("lib-topic-editor-title").textContent = id ? "تعديل ملف الموضوع" : "ملف موضوع دعوي جديد";
+  $("lib-btn-delete-topic").classList.toggle("hidden", !id);
+  $("lib-topic-id").value = id || "";
+  $("lib-topic-title").value = "";
+  $("lib-topic-idea").value = "";
+  $("lib-topic-goals").value = "";
+  $("lib-topic-reflections").value = "";
+  $("lib-topic-axes-container").innerHTML = "";
+  $("lib-topic-evidences-container").innerHTML = "";
+  $("lib-topic-sources-list").innerHTML = "";
+  $("lib-topic-status").innerHTML = "";
+  if(id){
+    var t = loadLibraryTopics().find(function(x){ return x.id === id; });
+    if(t){
+      $("lib-topic-title").value = t.title||"";
+      $("lib-topic-idea").value = t.idea||"";
+      $("lib-topic-goals").value = t.goals||"";
+      $("lib-topic-reflections").value = t.reflections||"";
+      // المحاور
+      (t.axes||[]).forEach(function(axis){
+        libAddAxisRow(axis.title, axis.sub||[]);
+      });
+      // الأدلة
+      (t.evidences||[]).forEach(function(ev){
+        libAddEvidenceRow(ev.type, ev.text, ev.source, ev.page);
+      });
+      // المصادر المرتبطة
+      renderLinkedSources(t.sourceIds||[]);
+    }
+  } else {
+    libAddAxisRow("", []);
+    libAddEvidenceRow("verse", "", "", "");
+  }
+  window.scrollTo(0,0);
+}
+
+function libAddAxisRow(title, subs){
+  var container = $("lib-topic-axes-container");
+  var div = document.createElement("div");
+  div.className = "topic-axis-card card";
+  div.innerHTML =
+    '<div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">' +
+    '<input class="inp" style="flex:2;" placeholder="عنوان المحور الرئيسي..." value="' + esc(title) + '">' +
+    '<input class="inp" style="flex:3;" placeholder="المحاور الفرعية مفصولة بفواصل..." value="' + esc((subs||[]).join(", ")) + '">' +
+    '<button class="btn-danger btn-sm" onclick="this.closest(\'.topic-axis-card\').remove()">حذف المحور</button>' +
+    '</div>';
+  container.appendChild(div);
+}
+
+function libAddEvidenceRow(type, text, source, page){
+  var container = $("lib-topic-evidences-container");
+  var typeLabel = { verse:"آية قرآنية", hadith:"حديث نبوي", quote:"نقل علمي" }[type] || "نقل علمي";
+  var div = document.createElement("div");
+  div.className = "card";
+  div.style.padding = "12px";
+  div.style.display = "flex";
+  div.style.gap = "8px";
+  div.style.flexWrap = "wrap";
+  div.style.alignItems = "center";
+  div.innerHTML =
+    '<select class="sel" style="width:110px;">' +
+    '<option value="verse"' + (type==="verse"?" selected":"") + '>آية قرآنية</option>' +
+    '<option value="hadith"' + (type==="hadith"?" selected":"") + '>حديث نبوي</option>' +
+    '<option value="quote"' + (type==="quote"?" selected":"") + '>نقل علمي</option>' +
+    '</select>' +
+    '<input class="inp" style="flex:2;" placeholder="نص الدليل..." value="' + esc(text) + '">' +
+    '<input class="inp" style="flex:1;" placeholder="المصدر" value="' + esc(source) + '">' +
+    '<input class="inp" style="flex:1;" placeholder="الصفحة" value="' + esc(page) + '">' +
+    '<button class="btn-danger btn-sm" style="padding:4px 8px; font-size:12px;" onclick="this.closest(\'.card\').remove()">حذف</button>';
+  container.appendChild(div);
+}
+
+function renderLinkedSources(sourceIds){
+  var box = $("lib-topic-sources-list");
+  var all = loadLibrarySources();
+  var linked = all.filter(function(s){ return sourceIds.includes(s.id); });
+  if(!linked.length){ box.innerHTML = '<div class="empty" style="padding:12px;">لا توجد مصادر مرتبطة بعد.</div>'; return; }
+  box.innerHTML = "";
+  linked.forEach(function(s){
+    var div = document.createElement("div");
+    div.className = "library-item";
+    div.style.marginBottom = "8px";
+    div.setAttribute("data-source-id", s.id);
+    div.innerHTML =
+      '<div><h4 style="font-size:14px;">' + esc(s.title) + '</h4><div class="source-meta">' + esc(s.type) + " • " + esc(s.section) + '</div></div>' +
+      '<div class="row-btns">' +
+      '<button class="btn-line btn-sm" onclick="libUnlinkTopicSource(\'' + s.id + '\')">فك الربط</button>' +
+      '</div>';
+    box.appendChild(div);
+  });
+}
+
+function libLinkTopicSource(){
+  var topicId = $("lib-topic-id").value;
+  var topic = loadLibraryTopics().find(function(x){ return x.id === topicId; });
+  if(!topic) return;
+  var allSources = loadLibrarySources();
+  var available = allSources.filter(function(s){ return !topic.sourceIds || !topic.sourceIds.includes(s.id); });
+  if(!available.length){ toast("جميع المصادر مرتبطة بالفعل بهذا الموضوع"); return; }
+  // إظهار قائمة بسيطة للاختيار - نأخذ أول متاح للتبسيط، أو يمكن تحسينه لاحقًا
+  var s = available[0];
+  if(confirm("ربط المصدر: " + s.title + "؟")){
+    if(!topic.sourceIds) topic.sourceIds = [];
+    topic.sourceIds.push(s.id);
+    var arr = loadLibraryTopics();
+    var idx = arr.findIndex(function(x){ return x.id === topic.id; });
+    if(idx >= 0) arr[idx] = topic;
+    saveLibraryTopics(arr);
+    renderLinkedSources(topic.sourceIds);
+  }
+}
+
+function libUnlinkTopicSource(sourceId){
+  var topic = loadLibraryTopics().find(function(x){ return x.id === $("lib-topic-id").value; });
+  if(!topic) return;
+  topic.sourceIds = (topic.sourceIds||[]).filter(function(sid){ return sid !== sourceId; });
+  var arr = loadLibraryTopics();
+  var idx = arr.findIndex(function(x){ return x.id === topic.id; });
+  if(idx >= 0) arr[idx] = topic;
+  saveLibraryTopics(arr);
+  renderLinkedSources(topic.sourceIds);
+}
+
+function libSaveTopic(){
+  var id = $("lib-topic-id").value.trim();
+  var title = $("lib-topic-title").value.trim();
+  if(!title){ $("lib-topic-status").innerHTML = '<div class="status-err"> فضلًا أدخل عنوان الموضوع.</div>'; return; }
+  var axes = [];
+  $("lib-topic-axes-container").querySelectorAll(".topic-axis-card").forEach(function(card){
+    var inputs = card.querySelectorAll("input");
+    var mainTitle = inputs[0].value.trim();
+    var subs = inputs[1] ? inputs[1].value.split(",").map(function(x){ return x.trim(); }).filter(Boolean) : [];
+    if(mainTitle) axes.push({ title: mainTitle, sub: subs });
+  });
+  var evidences = [];
+  $("lib-topic-evidences-container").querySelectorAll("div.card").forEach(function(card){
+    var sel = card.querySelector("select");
+    var inputs = card.querySelectorAll("input");
+    evidences.push({ type: sel.value, text: inputs[0].value.trim(), source: inputs[1]?.value.trim()||"", page: inputs[2]?.value.trim()||"" });
+  });
+  // جمع معرفات المصادر المرتبطة من البطاقات المعروضة
+  var sourceIds = [];
+  $("lib-topic-sources-list").querySelectorAll(".library-item[data-source-id]").forEach(function(item){
+    sourceIds.push(item.getAttribute("data-source-id"));
+  });
+  var t = {
+    id: id || uid(),
+    title: title,
+    idea: $("lib-topic-idea").value.trim(),
+    goals: $("lib-topic-goals").value.trim(),
+    axes: axes,
+    evidences: evidences,
+    sourceIds: sourceIds,
+    reflections: $("lib-topic-reflections").value.trim(),
+    createdAt: id ? (loadLibraryTopics().find(function(x){ return x.id === id; })||{}).createdAt : Date.now(),
+    updatedAt: Date.now()
+  };
+  var arr = loadLibraryTopics();
+  var idx = arr.findIndex(function(x){ return x.id === t.id; });
+  if(idx >= 0) arr[idx] = t; else arr.push(t);
+  saveLibraryTopics(arr);
+  showLibrary();
+  toast(id ? "تم تعديل ملف الموضوع ✓" : "تم إنشاء ملف الموضوع ✓");
+}
+
+function libDeleteTopic(id){
+  if(!confirm("هل أنت متأكدة من حذف ملف الموضوع؟")) return;
+  var arr = loadLibraryTopics().filter(function(x){ return x.id !== id; });
+  saveLibraryTopics(arr);
+  showLibrary();
+  toast("تم حذف ملف الموضوع ✓");
+}
+
+function libEditSource(id){ libOpenSourceEditor(id); }
+function libEditTopic(id){ libOpenTopicEditor(id); }
+function libOpenItem(type, id){
+  if(type === "source") libOpenSourceEditor(id);
+  else libOpenTopicEditor(id);
+}
+
+/* ---------- البحث والفلترة ---------- */
+$("lib-search").addEventListener("input", function(){
+  libState.search = this.value;
+  renderLibrarySources();
+  renderLibraryTopics();
+});
+$("lib-filter-section").addEventListener("change", function(){
+  libState.sectionFilter = this.value;
+  renderLibraryCategories();
+  renderLibrarySources();
+});
+$("lib-filter-type").addEventListener("change", function(){
+  libState.typeFilter = this.value;
+  renderLibrarySources();
+});
+$("lib-btn-fav-only").addEventListener("click", function(){
+  libState.favOnly = !libState.favOnly;
+  this.classList.toggle("active", libState.favOnly);
+  renderLibrarySources();
+});
+
+/* ---------- أزرار الإجراءات ---------- */
+on("lib-btn-add-source", function(){ libOpenSourceEditor(null); });
+on("lib-btn-add-topic", function(){ libOpenTopicEditor(null); });
+on("lib-back-to-library", showLibrary);
+on("lib-topic-back-to-library", showLibrary);
+on("lib-btn-save-source", libSaveSource);
+on("lib-btn-cancel-source", showLibrary);
+on("lib-btn-delete-source", function(){ if($("lib-source-id").value) libDeleteSource($("lib-source-id").value); });
+on("lib-btn-save-topic", libSaveTopic);
+on("lib-btn-cancel-topic", showLibrary);
+on("lib-btn-delete-topic", function(){ if($("lib-topic-id").value) libDeleteTopic($("lib-topic-id").value); });
+on("lib-btn-add-axis", function(){ libAddAxisRow("", []); });
+on("lib-btn-add-evidence", function(){ libAddEvidenceRow("verse", "", "", ""); });
+on("lib-btn-link-source", libLinkTopicSource);
+
+/* ---------- إضافة إلى محاضرة ---------- */
+function libAddToLecture(type, id){
+  libState.addToLectureTarget = { type: type, id: id };
+  var item = type === "source" ? loadLibrarySources().find(function(x){ return x.id === id; }) : loadLibraryTopics().find(function(x){ return x.id === id; });
+  libState.addToLectureItem = item;
+  $("view-library").classList.add("hidden");
+  $("view-library-add-to-lecture").classList.remove("hidden");
+  var info = $("lib-addlect-item-info");
+  if(type === "source"){
+    info.innerHTML = '<div style="font-weight:700; color:var(--olive-dark);">' + esc(item.title) + '</div>' +
+      '<div style="font-size:13px; color:var(--muted);">' + esc(item.type) + " • " + esc(item.section) + (item.author?" • " + esc(item.author):"") + '</div>';
+  } else {
+    info.innerHTML = '<div style="font-weight:700; color:var(--olive-dark);">' + esc(item.title) + '</div>' +
+      '<div style="font-size:13px; color:var(--muted);">ملف موضوع دعوي • ' + (item.axes?item.axes.length:0) + ' محاور • ' + (item.evidences?item.evidences.length:0) + ' أدلة</div>';
+  }
+  renderAddToLectureList();
+  $("lib-addlect-status").innerHTML = "";
+}
+
+function renderAddToLectureList(){
+  var sel = $("lib-addlect-lecture");
+  sel.innerHTML = '<option value="">اختر محاضرة...</option>';
+  loadLectures().forEach(function(l){
+    var opt = document.createElement("option");
+    opt.value = l.id;
+    opt.textContent = l.title + " (" + l.type + " • " + l.duration + " دقيقة)";
+    sel.appendChild(opt);
+  });
+}
+
+function libConfirmAddToLecture(){
+  var lectureId = $("lib-addlect-lecture").value;
+  if(!lectureId){ $("lib-addlect-status").innerHTML = '<div class="status-err"> فضلًا اختري محاضرة.</div>'; return; }
+  var item = libState.addToLectureItem;
+  var type = libState.addToLectureTarget.type;
+  var content = "";
+  if(type === "source"){
+    content = "\n\n--- من المكتبة الدعوية: " + esc(item.title) + " ---\n";
+    content += "المؤلف: " + esc(item.author||"غير محدد") + "\n";
+    content += "النوع: " + esc(item.type) + " • القسم: " + esc(item.section) + "\n";
+    if(item.link) content += "الرابط: " + esc(item.link) + "\n";
+    if(item.volume || item.page) content += "الجزء: " + esc(item.volume||"") + " • الصفحة: " + esc(item.page||"") + "\n";
+    content += "النص المقتبس:\n" + esc(item.quotedText) + "\n";
+    if(item.notes) content += "ملاحظاتي: " + esc(item.notes) + "\n";
+    if(item.keywords) content += "كلمات مفتاحية: " + esc(item.keywords) + "\n";
+  } else {
+    content = "\n--- من ملف الموضوع: " + esc(item.title) + " ---\n";
+    content += "فكرة الموضوع: " + esc(item.idea||"") + "\n";
+    content += "الأهداف: " + esc(item.goals||"") + "\n";
+    if(item.axes && item.axes.length){
+      content += "المحاور:\n";
+      item.axes.forEach(function(a, i){
+        content += (i+1) + "- " + a.title + (a.sub && a.sub.length? " (فرعيين: " + a.sub.join(", ") + ")" : "") + "\n";
+      });
+    }
+    if(item.evidences && item.evidences.length){
+      content += "الأدلة:\n";
+      item.evidences.forEach(function(e){
+        content += "- " + e.text + " — المصدر: " + esc(e.source) + " صفحة: " + esc(e.page) + "\n";
+      });
+    }
+    if(item.reflections) content += "تأملاتي: " + esc(item.reflections) + "\n";
+  }
+  var arr = loadLectures();
+  var idx = arr.findIndex(function(x){ return x.id === lectureId; });
+  if(idx >= 0){
+    arr[idx].body = (arr[idx].body||"") + content;
+    arr[idx].updatedAt = Date.now();
+    arr[idx].needsReview = /يحتاج إلى مراجعة/.test(arr[idx].body) || /\[.+\]/.test(arr[idx].body);
+    saveLectures(arr);
+  }
+  showLibrary();
+  toast("تمت إضافة المادة إلى المحاضرة ✓");
+}
+
+function libCreateLectureFromTopic(){
+  var item = libState.addToLectureItem;
+  if(!item || libState.addToLectureTarget.type !== "topic"){
+    $("lib-addlect-status").innerHTML = '<div class="status-err"> هذه الوظيفة لملفات الموضوعات فقط.</div>'; return;
+  }
+  var content = "عنوان المحاضرة: " + esc(item.title) + "\n";
+  content += "فكرة الموضوع: " + esc(item.idea||"") + "\n";
+  content += "الأهداف: " + esc(item.goals||"") + "\n\n";
+  if(item.axes && item.axes.length){
+    content += "المحاور:\n";
+    item.axes.forEach(function(a, i){
+      content += (i+1) + "- " + a.title + "\n";
+      if(a.sub && a.sub.length) a.sub.forEach(function(s){ content += "   • " + s + "\n"; });
+    });
+    content += "\n";
+  }
+  if(item.evidences && item.evidences.length){
+    content += "الأدلة العلمية:\n";
+    item.evidences.forEach(function(e){
+      content += "- " + e.text + " — " + esc(e.source) + " (صفحة " + esc(e.page) + ")\n";
+    });
+    content += "\n";
+  }
+  if(item.reflections) content += "تأملات وفوائد:\n" + esc(item.reflections) + "\n\n";
+  content += "⚠️ يرجى مراجعة جميع الأدلة والتخريجات قبل الإلقاء.";
+  var d = {
+    title: item.title,
+    audience: "عامة الناس",
+    duration: "30",
+    type: "محاضرة",
+    style: "علمي تأصيلي",
+    notes: ""
+  };
+  var existing = loadLectures();
+  var newItem = {
+    id: uid(),
+    title: d.title,
+    audience: d.audience,
+    duration: d.duration,
+    type: d.type,
+    style: d.style,
+    notes: d.notes,
+    body: content,
+    brief: "",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    needsReview: true
+  };
+  existing.unshift(newItem);
+  saveLectures(existing);
+  showLibrary();
+  toast("تم إنشاء مسودة محاضرة جديدة من الموضوع ✓");
+}
+
+on("lib-addlect-back", showLibrary);
+on("lib-btn-confirm-add", libConfirmAddToLecture);
+on("lib-btn-create-new-lecture", libCreateLectureFromTopic);
+on("lib-btn-cancel-add", showLibrary);
 })();

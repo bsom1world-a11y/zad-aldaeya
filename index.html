@@ -24,6 +24,7 @@
       <button class="nav-item" data-view="new">✍️ محاضرة جديدة</button>
       <button class="nav-item" data-view="my">📚 محاضراتي <span id="count-badge" class="count"></span></button>
       <button class="nav-item" data-view="settings">⚙️ الإعدادات</button>
+      <button class="nav-item" data-view="library">📖 المكتبة الدعوية</button>
     </nav>
     <div class="side-foot">
       <p class="foot-note">الضبط العلمي: القرآن والسنة الصحيحة بفهم أهل العلم. ما لم يُتحقق منه يُوسم بـ «يحتاج إلى مراجعة».</p>
@@ -207,6 +208,206 @@
             <li>عودي إلى «محاضرة جديدة» واضغطي «إعداد المحاضرة».</li>
           </ol>
           <p class="hint">بدون تفعيل الخدمة ستظهر رسالة واضحة تطلب التفعيل، ولن يُعرض أي محتوى مختلق.</p>
+        </div>
+      </section>
+
+      <!-- المكتبة الدعوية الذكية -->
+      <section id="view-library" class="view hidden">
+        <h2 class="ptitle">المكتبة الدعوية الذكية</h2>
+        <p class="sub">مصادرك العلمية وملفات موضوعاتك الدعوية محفوظة محليًا في متصفحك، وترتبط بمحاضراتك في زاد الداعية.</p>
+
+        <!-- شريط البحث والإجراءات -->
+        <div class="toolbar">
+          <input id="lib-search" class="inp" placeholder="ابحثي في مكتبتك الدعوية...">
+          <button id="lib-btn-add-source" class="btn-primary">إضافة مصدر جديد</button>
+          <button id="lib-btn-add-topic" class="btn-gold">إنشاء ملف موضوع دعوي</button>
+        </div>
+
+        <!-- الأقسام العلمية -->
+        <div class="card">
+          <h3>الأقسام العلمية</h3>
+          <div id="lib-categories" class="category-grid"></div>
+        </div>
+
+        <!-- آخر المواد المستخدمة -->
+        <div class="card">
+          <h3>آخر المواد التي استخدمتها</h3>
+          <div id="lib-recent"></div>
+        </div>
+
+        <!-- المصادر المحفوظة -->
+        <div class="card">
+          <h3>المصادر المحفوظة</h3>
+          <div class="toolbar" style="margin-top:0; flex-wrap:wrap; align-items:center;">
+            <select id="lib-filter-section" class="sel" style="width:auto; max-width:200px;">
+              <option value="">جميع الأقسام</option>
+              <option value="القرآن الكريم والتفسير">القرآن الكريم والتفسير</option>
+              <option value="السنة النبوية وشروح الأحاديث">السنة النبوية وشروح الأحاديث</option>
+              <option value="العقيدة والتوحيد">العقيدة والتوحيد</option>
+              <option value="الفقه والأحكام الشرعية">الفقه والأحكام الشرعية</option>
+              <option value="التربية الإيمانية والسلوك">التربية الإيمانية والسلوك</option>
+              <option value="أقوال العلماء والفوائد العلمية">أقوال العلماء والفوائد العلمية</option>
+              <option value="الموضوعات الدعوية المعاصرة">الموضوعات الدعوية المعاصرة</option>
+            </select>
+            <select id="lib-filter-type" class="sel" style="width:auto; max-width:180px;">
+              <option value="">جميع الأنواع</option>
+              <option value="كتاب">كتاب</option>
+              <option value="بحث">بحث</option>
+              <option value="مقال">مقال</option>
+              <option value="فتوى">فتوى</option>
+              <option value="تفسير">تفسير</option>
+              <option value="حديث">حديث</option>
+              <option value="فائدة علمية">فائدة علمية</option>
+            </select>
+            <button id="lib-btn-fav-only" class="btn-line" style="padding:6px 10px; font-size:13px;">المفضلة فقط</button>
+          </div>
+          <div id="lib-sources-list"></div>
+        </div>
+
+        <!-- ملفات الموضوعات -->
+        <div class="card">
+          <h3>ملفات الموضوعات الدعوية</h3>
+          <div id="lib-topics-list"></div>
+        </div>
+      </section>
+
+      <!-- محرر المصدر -->
+      <section id="view-library-source-editor" class="view hidden">
+        <button id="lib-back-to-library" class="btn-line">← رجوع للمكتبة</button>
+        <h2 id="lib-source-editor-title" class="ptitle">إضافة مصدر جديد</h2>
+        <p class="sub">املئي بيانات المصدر العلمي. الحقول المميزة بعلامة نجمة (*) مطلوبة.</p>
+        <div class="card">
+          <input id="lib-source-id" type="hidden">
+          <label class="lbl" for="lib-source-title">عنوان المصدر *</label>
+          <input id="lib-source-title" class="inp" placeholder="مثال:median interpretation">
+
+          <label class="lbl" for="lib-source-author">اسم المؤلف</label>
+          <input id="lib-source-author" class="inp" placeholder="مثال: ابن تيمية">
+
+          <div class="grid2">
+            <div>
+              <label class="lbl" for="lib-source-type">نوع المصدر</label>
+              <select id="lib-source-type" class="sel">
+                <option>كتاب</option>
+                <option>بحث</option>
+                <option>مقال</option>
+                <option>فتوى</option>
+                <option>تفسير</option>
+                <option>حديث</option>
+                <option>فائدة علمية</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl" for="lib-source-section">القسم العلمي</label>
+              <select id="lib-source-section" class="sel">
+                <option>القرآن الكريم والتفسير</option>
+                <option>السنة النبوية وشروح الأحاديث</option>
+                <option>العقيدة والتوحيد</option>
+                <option>الفقه والأحكام الشرعية</option>
+                <option>التربية الإيمانية والسلوك</option>
+                <option>أقوال العلماء والفوائد العلمية</option>
+                <option>الموضوعات الدعوية المعاصرة</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="lbl" for="lib-source-link">رابط المصدر الأصلي</label>
+          <input id="lib-source-link" class="inp" dir="ltr" placeholder="https://example.com/source">
+
+          <div class="grid2">
+            <div>
+              <label class="lbl" for="lib-source-volume">رقم الجزء (إن وجد)</label>
+              <input id="lib-source-volume" class="inp" placeholder="الجزء الأول...">
+            </div>
+            <div>
+              <label class="lbl" for="lib-source-page">رقم الصفحة (إن وجد)</label>
+              <input id="lib-source-page" class="inp" placeholder="مثال: 45">
+            </div>
+          </div>
+
+          <label class="lbl" for="lib-source-quoted">النص المقتبس</label>
+          <textarea id="lib-source-quoted" class="ta" placeholder="اكتب النص الذي اقتبسته من المصدر..."></textarea>
+
+          <label class="lbl" for="lib-source-notes">ملاحظاتي الخاصة</label>
+          <textarea id="lib-source-notes" class="ta" placeholder="ملاحظاتك الشخصية حول هذا المصدر..."></textarea>
+
+          <label class="lbl" for="lib-source-keywords">كلمات مفتاحية</label>
+          <input id="lib-source-keywords" class="inp" placeholder="مثال: صبر، بلاء، أجر، contenue مفصولة بفواصل">
+
+          <div class="actions-row wrap">
+            <button id="lib-btn-save-source" class="btn-primary">💾 حفظ المصدر</button>
+            <button id="lib-btn-delete-source" class="btn-danger hidden">🗑️ حذف المصدر</button>
+            <button id="lib-btn-cancel-source" class="btn-line">إلغاء</button>
+          </div>
+          <div id="lib-source-status"></div>
+        </div>
+      </section>
+
+      <!-- محرر ملف الموضوع -->
+      <section id="view-library-topic-editor" class="view hidden">
+        <button id="lib-topic-back-to-library" class="btn-line">← رجوع للمكتبة</button>
+        <h2 id="lib-topic-editor-title" class="ptitle">ملف موضوع دعوي جديد</h2>
+        <p class="sub">أنشئي ملفًا علميًا مستقلاً لموضوع دعوي، وربطي به المصادر من مكتبتك.</p>
+        <div class="card">
+          <input id="lib-topic-id" type="hidden">
+          <label class="lbl" for="lib-topic-title">عنوان الموضوع *</label>
+          <input id="lib-topic-title" class="inp" placeholder="مثال: التربية بالقرآن">
+
+          <label class="lbl" for="lib-topic-idea">فكرة الموضوع</label>
+          <textarea id="lib-topic-idea" class="ta" placeholder="ما هي فكرة هذا الموضوع الدعوي؟"></textarea>
+
+          <label class="lbl" for="lib-topic-goals">أهداف الموضوع</label>
+          <textarea id="lib-topic-goals" class="ta" placeholder="ما الأهداف التي تريدين تحقيقها من هذا الموضوع؟"></textarea>
+
+          <label class="lbl" style="margin-top:16px;" for="lib-topic-axes">المحاور الرئيسية والفرعية</label>
+          <div id="lib-topic-axes-container" style="display:flex; flex-direction:column; gap:10px;">
+            <div class="topic-axis-card card" style="padding:12px;">
+              <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+                <input class="inp" style="flex:2;" placeholder="عنوان المحور الرئيسي...">
+                <input class="inp" style="flex:3;" placeholder="المحاور الفرعية مفصولة بفواصل...">
+                <button class="btn-danger btn-sm" style="padding:4px 8px; font-size:12px;">حذف المحور</button>
+              </div>
+            </div>
+          </div>
+          <button id="lib-btn-add-axis" class="btn-line btn-sm" style="margin-top:8px;">+ إضافة محور جديد</button>
+
+          <label class="lbl" style="margin-top:16px;" for="lib-topic-evidences">الآيات والأحاديث والنقول العلمية</label>
+          <div id="lib-topic-evidences-container" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <button id="lib-btn-add-evidence" class="btn-line btn-sm" style="margin-top:8px;">+ إضافة دليل علمي</button>
+
+          <label class="lbl" style="margin-top:16px;" for="lib-topic-sources">ربط المصادر المحفوظة بالموضوع</label>
+          <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+            <div id="lib-topic-sources-list" style="flex:1; min-height:40px;"></div>
+            <button id="lib-btn-link-source" class="btn-line btn-sm" style="flex-shrink:0;">+ ربط مصدر موجود</button>
+          </div>
+
+          <label class="lbl" for="lib-topic-reflections">تأملاتي وفوائدي الدعوية</label>
+          <textarea id="lib-topic-reflections" class="ta" placeholder="اكتب تأملاتك الشخصية وفوائدك الدعوية من هذا الموضوع..."></textarea>
+
+          <div class="actions-row wrap">
+            <button id="lib-btn-save-topic" class="btn-primary">💾 حفظ الملف</button>
+            <button id="lib-btn-delete-topic" class="btn-danger hidden">🗑️ حذف الملف</button>
+            <button id="lib-btn-cancel-topic" class="btn-line">إلغاء</button>
+          </div>
+          <div id="lib-topic-status"></div>
+        </div>
+      </section>
+
+      <!-- إضافة إلى محاضرة -->
+      <section id="view-library-add-to-lecture" class="view hidden">
+        <button id="lib-addlect-back" class="btn-line">← رجوع</button>
+        <h2 class="ptitle">إضافة المادة إلى محاضرة</h2>
+        <p class="sub">اختر المحاضرة التي تريدين إضافة المادة إليها.</p>
+        <div class="card">
+          <div id="lib-addlect-item-info" style="background:var(--beige); border-radius:10px; padding:14px; margin-bottom:16px;"></div>
+          <label class="lbl" for="lib-addlect-lecture">اختر المحاضرة</label>
+          <select id="lib-addlect-lecture" class="sel"></select>
+          <div class="actions-row wrap">
+            <button id="lib-btn-confirm-add" class="btn-primary">✅ إضافة إلى المحاضرة</button>
+            <button id="lib-btn-create-new-lecture" class="btn-gold">✨ إنشاء محاضرة جديدة من هذا الموضوع</button>
+            <button id="lib-btn-cancel-add" class="btn-line">إلغاء</button>
+          </div>
+          <div id="lib-addlect-status"></div>
         </div>
       </section>
     </main>
