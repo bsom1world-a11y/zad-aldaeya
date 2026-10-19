@@ -310,11 +310,11 @@ crumbMap.library = "المكتبة الدعوية";
 
 function showLibrary(){
   show("library");
-  renderLibraryCategories();
-  renderLibraryRecent();
-  renderLibrarySources();
-  renderLibraryTopics();
-  renderLibraryBooks();
+  try{ renderLibraryCategories(); }catch(e){ console.error("renderLibraryCategories error:", e); }
+  try{ renderLibraryRecent(); }catch(e){ console.error("renderLibraryRecent error:", e); }
+  try{ renderLibrarySources(); }catch(e){ console.error("renderLibrarySources error:", e); }
+  try{ renderLibraryTopics(); }catch(e){ console.error("renderLibraryTopics error:", e); }
+  try{ renderLibraryBooks(); }catch(e){ console.error("renderLibraryBooks error:", e); }
 }
 
 function renderLibraryCategories(){
