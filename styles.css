@@ -119,3 +119,48 @@ body{margin:0;background:var(--paper);color:var(--ink);font-family:'Cairo',sans-
   #ed-body{display:none}
   #print-area{display:block!important;white-space:pre-wrap;line-height:2.1;font-size:14pt;padding:20px}
 }
+
+/* --- PWA 상태 연결 --- */
+.pwa-status{font-size:11.5px;padding:4px 10px;border-radius:12px;display:inline-block;margin-top:8px;line-height:1.4}
+.pwa-status.status-ok{background:#dcfce7;color:#15803d;border:1px solid #86efac}
+.pwa-status.status-err{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}
+
+/* --- تحسينات اللمس للجوال --- */
+button, .inp, .sel{ min-height:46px; }
+.ta{ min-height:100px; }
+.ta.big{ min-height:300px; }
+.input-group,.actions-row{ gap:8px; }
+
+/* --- مناطق أمان iPhone --- */
+@supports (padding: env(safe-area-inset-bottom)){
+  #view{ padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+}
+@supports (padding: env(safe-area-inset-top)){
+  #topbar{ padding-top: calc(12px + env(safe-area-inset-top)); }
+}
+
+/* --- إخفاء شريط المتصفح في وضع التثبيت (standalone) --- */
+@media (display-mode: standalone){
+  body{ overflow-y: auto; }
+  #topbar{ padding-top: calc(12px + env(safe-area-inset-top)); }
+}
+
+/* --- تحسين محرر المحاضرات للجوال --- */
+@media (max-width:600px){
+  .ta.big{ min-height:260px; }
+  .card{ padding:14px; border-radius:12px; }
+  .ptitle{ font-size:22px; margin:2px 0 6px; }
+  .sub{ font-size:13px; margin-bottom:12px; }
+  .lbl{ font-size:13px; margin:8px 0 4px; }
+  .inp,.sel,.ta{ font-size:15px; padding:10px; }
+  .btn-primary,.btn-gold,.btn-line{ padding:10px 16px; font-size:14px; }
+  .actions-row{ flex-direction: column; gap:8px; }
+  .actions-row button{ width: 100%; }
+  .category-grid{ grid-template-columns: repeat(2,1fr); }
+  #view{ padding:12px; }
+  #sidebar{ width: 250px; }
+  #sidebar.open{ right: 0; }
+  .hero{ padding:28px 16px; }
+  .hero-title{ font-size:28px; }
+  .hero-sub{ font-size:15px; }
+}

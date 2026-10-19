@@ -55,7 +55,7 @@ on("menu-btn", function(){ $("sidebar").classList.toggle("open"); });
 on("back-to-list", function(){ show("my"); });
 on("btn-clear", function(){ ["f-title","f-notes"].forEach(function(id){$(id).value="";}); });
 
-function renderCount(){ var n=loadLectures().length; $("count-badge").textContent = n?("("+n+")"):""; }
+function renderCount(){ var n=loadLectures().length; $("count-badge").textContent = n?("("+n+")"):""; var sync=$("sync-status"); if(sync){ var now=new Date().toLocaleTimeString("ar-SA",{hour:"2-digit",minute:"2-digit"}); sync.textContent="آخر حفظ: "+now; } }
 function renderAiStatus(){
   var s=loadSettings();
   var ok = !!(s.endpoint || s.key);
@@ -110,6 +110,11 @@ $("btn-generate").addEventListener("click", async function(){
   if(!d.title){ box.innerHTML = '<div class="status-err"> فضلًا أدخلي عنوان المحاضرة أولًا.</div>'; return; }
   var s = loadSettings();
   var btn = $("btn-generate");
+
+  if(!navigator.onLine){
+    box.innerHTML = '<div class="status-err">غير متصل بالإنترنت. خدمة الذكاء الاصطناعي تتطلب اتصالاً بالشبكة.</div>';
+    return;
+  }
 
   // لا توجد خدمة مفعّلة → رسالة واضحة + خيار هيكل فارغ معلن
   if(!s.endpoint && !s.key){

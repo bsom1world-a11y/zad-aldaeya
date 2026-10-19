@@ -1,0 +1,34 @@
+{
+  "name": "زاد الداعية | إعداد المحاضرات الدعوية",
+  "short_name": "زاد",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf8f1",
+  "theme_color": "#5f7233",
+  "dir": "rtl",
+  "lang": "ar",
+  "description": "مساعدك في إعداد المحاضرات والدروس والندوات الدعوية بطريقة علمية ومنظمة",
+  "icons": [
+    {
+      "src": "icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "maskable-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["education", "religion", "productivity"]
+}

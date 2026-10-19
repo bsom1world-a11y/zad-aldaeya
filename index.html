@@ -8,6 +8,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.svg" sizes="192x192">
+<link rel="apple-touch-icon" href="icon-512.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="زاد">
+<meta name="msapplication-TileColor" content="#5f7233">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 </head>
 <body>
 <div id="app">
@@ -28,6 +36,9 @@
     </nav>
     <div class="side-foot">
       <p class="foot-note">الضبط العلمي: القرآن والسنة الصحيحة بفهم أهل العلم. ما لم يُتحقق منه يُوسم بـ «يحتاج إلى مراجعة».</p>
+      <div class="pwa-status" id="pwa-status"></div>
+      <div id="sync-status" class="pwa-status status-ok">محفوظة محليًا</div>
+      <button id="btn-install-app" class="btn-ghost hidden">📲 تثبيت التطبيق</button>
     </div>
   </aside>
 
@@ -427,5 +438,50 @@
 <div id="print-area" class="hidden"></div>
 <div id="toasts"></div>
 <script src="app.js"></script>
+<script>
+  // تسجيل خدمة العامل (Service Worker)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then((reg) => {
+        console.log('Service Worker مسجل:', reg.scope);
+      })
+      .catch((err) => {
+        console.log('فشل تسجيل Service Worker:', err);
+      });
+  }
+
+  // معالجة مطالبة التثبيت
+  let deferredPrompt;
+  const installBtn = document.getElementById('btn-install-app');
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBtn) {
+      installBtn.classList.remove('hidden');
+      installBtn.addEventListener('click', () => {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            installBtn.classList.add('hidden');
+          }
+          deferredPrompt = null;
+        });
+      });
+    }
+  });
+
+  // مؤشر الاتصال بالإنترنت
+  const pwaStatus = document.getElementById('pwa-status');
+  function updateOnlineStatus() {
+    if (pwaStatus) {
+      pwaStatus.textContent = navigator.onLine ? 'متصل ✓' : 'غير متصل ⚠️';
+      pwaStatus.className = 'pwa-status ' + (navigator.onLine ? 'status-ok' : 'status-err');
+    }
+  }
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+  updateOnlineStatus();
+</script>
 </body>
 </html>
