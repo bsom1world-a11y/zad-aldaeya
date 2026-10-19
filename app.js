@@ -362,10 +362,18 @@ function renderLibraryRecent(){
       : (it.axes && it.axes.length ? it.axes.length + " محاور" : "") + " • موضوع";
     div.innerHTML =
       '<div><h4>' + esc(it.title) + '</h4><div class="source-meta">' + esc(meta) + '</div></div>' +
-      '<div class="row-btns">' +
-      '<button class="btn-line btn-sm" onclick="libOpenItem(\'' + entry.type + '\',\'' + it.id + '\')">فتح</button>' +
-      '<button class="btn-line btn-sm" onclick="libAddToLecture(\'' + entry.type + '\',\'' + it.id + '\')">إضافة إلى محاضرة</button>' +
-      '</div>';
+      '<div class="row-btns"></div>';
+    var btns = div.querySelector(".row-btns");
+    var btnOpen = document.createElement("button");
+    btnOpen.className = "btn-line btn-sm";
+    btnOpen.textContent = "فتح";
+    btnOpen.addEventListener("click", function(){ libOpenItem(entry.type, it.id); });
+    btns.appendChild(btnOpen);
+    var btnAdd = document.createElement("button");
+    btnAdd.className = "btn-line btn-sm";
+    btnAdd.textContent = "إضافة إلى محاضرة";
+    btnAdd.addEventListener("click", function(){ libAddToLecture(entry.type, it.id); });
+    btns.appendChild(btnAdd);
     box.appendChild(div);
   });
 }
@@ -394,12 +402,29 @@ function renderLibrarySources(){
       '<div><h4>' + esc(s.title) + '</h4><div class="source-meta">' + meta + '</div>' +
       (s.quotedText ? '<div class="source-body">' + esc(s.quotedText) + '</div>' : '') +
       '</div>' +
-      '<div class="row-btns">' +
-      '<span class="fav-star ' + (s.favorite ? "filled" : "") + '" title="المفضلة" onclick="libToggleFavSource(\'' + s.id + '\')">' + (s.favorite ? "★" : "☆") + '</span>' +
-      '<button class="btn-line btn-sm" onclick="libEditSource(\'' + s.id + '\')">تعديل</button>' +
-      '<button class="btn-line btn-sm" onclick="libAddToLecture(\'source\',\'' + s.id + '\')">إضافة إلى محاضرة</button>' +
-      '<button class="btn-danger btn-sm" onclick="libDeleteSource(\'' + s.id + '\')">حذف</button>' +
-      '</div>';
+      '<div class="row-btns"></div>';
+    var btns = div.querySelector(".row-btns");
+    var fav = document.createElement("span");
+    fav.className = "fav-star " + (s.favorite ? "filled" : "");
+    fav.title = "المفضلة";
+    fav.textContent = s.favorite ? "★" : "☆";
+    fav.addEventListener("click", function(){ libToggleFavSource(s.id); });
+    btns.appendChild(fav);
+    var btnEdit = document.createElement("button");
+    btnEdit.className = "btn-line btn-sm";
+    btnEdit.textContent = "تعديل";
+    btnEdit.addEventListener("click", function(){ libEditSource(s.id); });
+    btns.appendChild(btnEdit);
+    var btnAdd = document.createElement("button");
+    btnAdd.className = "btn-line btn-sm";
+    btnAdd.textContent = "إضافة إلى محاضرة";
+    btnAdd.addEventListener("click", function(){ libAddToLecture("source", s.id); });
+    btns.appendChild(btnAdd);
+    var btnDel = document.createElement("button");
+    btnDel.className = "btn-danger btn-sm";
+    btnDel.textContent = "حذف";
+    btnDel.addEventListener("click", function(){ libDeleteSource(s.id); });
+    btns.appendChild(btnDel);
     box.appendChild(div);
   });
 }
@@ -425,12 +450,28 @@ function renderLibraryTopics(){
       '<div><h4>' + esc(t.title) + '</h4><div class="source-meta">' +
       axesCount + ' محاور • ' + evidencesCount + ' أدلة • ' + linkedCount + ' مصدر مرتبط' +
       '</div><div class="topic-body">' + esc((t.idea||"").substring(0,120)) + (t.idea && t.idea.length>120?"...":"") + '</div></div>' +
-      '<div class="row-btns">' +
-      '<button class="btn-line btn-sm" onclick="libOpenItem(\'topic\',\'' + t.id + '\')">فتح</button>' +
-      '<button class="btn-line btn-sm" onclick="libCreateLectureFromTopic(\'' + t.id + '\')">إنشاء محاضرة من هذا الموضوع</button>' +
-      '<button class="btn-line btn-sm" onclick="libEditTopic(\'' + t.id + '\')">تعديل</button>' +
-      '<button class="btn-danger btn-sm" onclick="libDeleteTopic(\'' + t.id + '\')">حذف</button>' +
-      '</div>';
+      '<div class="row-btns"></div>';
+    var btns = div.querySelector(".row-btns");
+    var btnOpen = document.createElement("button");
+    btnOpen.className = "btn-line btn-sm";
+    btnOpen.textContent = "فتح";
+    btnOpen.addEventListener("click", function(){ libOpenItem("topic", t.id); });
+    btns.appendChild(btnOpen);
+    var btnCreate = document.createElement("button");
+    btnCreate.className = "btn-line btn-sm";
+    btnCreate.textContent = "إنشاء محاضرة من هذا الموضوع";
+    btnCreate.addEventListener("click", function(){ libCreateLectureFromTopic(t.id); });
+    btns.appendChild(btnCreate);
+    var btnEdit = document.createElement("button");
+    btnEdit.className = "btn-line btn-sm";
+    btnEdit.textContent = "تعديل";
+    btnEdit.addEventListener("click", function(){ libEditTopic(t.id); });
+    btns.appendChild(btnEdit);
+    var btnDel = document.createElement("button");
+    btnDel.className = "btn-danger btn-sm";
+    btnDel.textContent = "حذف";
+    btnDel.addEventListener("click", function(){ libDeleteTopic(t.id); });
+    btns.appendChild(btnDel);
     box.appendChild(div);
   });
 }
@@ -604,9 +645,13 @@ function renderLinkedSources(sourceIds){
     div.setAttribute("data-source-id", s.id);
     div.innerHTML =
       '<div><h4 style="font-size:14px;">' + esc(s.title) + '</h4><div class="source-meta">' + esc(s.type) + " • " + esc(s.section) + '</div></div>' +
-      '<div class="row-btns">' +
-      '<button class="btn-line btn-sm" onclick="libUnlinkTopicSource(\'' + s.id + '\')">فك الربط</button>' +
-      '</div>';
+      '<div class="row-btns"></div>';
+    var btns = div.querySelector(".row-btns");
+    var btnUnlink = document.createElement("button");
+    btnUnlink.className = "btn-line btn-sm";
+    btnUnlink.textContent = "فك الربط";
+    btnUnlink.addEventListener("click", function(){ libUnlinkTopicSource(s.id); });
+    btns.appendChild(btnUnlink);
     box.appendChild(div);
   });
 }
@@ -1043,13 +1088,31 @@ function renderLibraryBooks(){
       '<div><h4>'+esc(b.title)+'</h4><div class="source-meta">'+esc(b.author||"مؤلف غير محدد")+' • '+esc(b.classification)+'</div>' +
       '<div class="source-meta" style="font-size:11.5px; color:var(--muted);">'+typeLabel+'</div>' +
       (b.description?'<div class="source-body">'+esc(b.description)+'</div>':'') +
-      '</div>' +
-      '<div class="row-btns">' +
-      '<span class="fav-star '+(b.favorite?"filled":"")+'" title="المفضلة" onclick="libToggleFavBook(\''+b.id+'\')">'+(b.favorite?"★":"☆")+'</span>' +
-      '<button class="btn-line btn-sm" onclick="libOpenBook(\''+b.id+'\')">'+(b.contentType==="external-link"?"فتح المصدر":"قراءة")+'</button>' +
-      '<button class="btn-line btn-sm" onclick="libEditBook(\''+b.id+'\')">تعديل</button>' +
-      '<button class="btn-danger btn-sm" onclick="libDeleteBook(\''+b.id+'\')">حذف</button>' +
       '</div>';
+    var btns = document.createElement("div");
+    btns.className = "row-btns";
+    var fav = document.createElement("span");
+    fav.className = "fav-star " + (b.favorite ? "filled" : "");
+    fav.title = "المفضلة";
+    fav.textContent = b.favorite ? "★" : "☆";
+    fav.addEventListener("click", function(){ libToggleFavBook(b.id); });
+    btns.appendChild(fav);
+    var btnRead = document.createElement("button");
+    btnRead.className = "btn-line btn-sm";
+    btnRead.textContent = b.contentType === "external-link" ? "فتح المصدر" : "قراءة";
+    btnRead.addEventListener("click", function(){ libOpenBook(b.id); });
+    btns.appendChild(btnRead);
+    var btnEdit = document.createElement("button");
+    btnEdit.className = "btn-line btn-sm";
+    btnEdit.textContent = "تعديل";
+    btnEdit.addEventListener("click", function(){ libEditBook(b.id); });
+    btns.appendChild(btnEdit);
+    var btnDel = document.createElement("button");
+    btnDel.className = "btn-danger btn-sm";
+    btnDel.textContent = "حذف";
+    btnDel.addEventListener("click", function(){ libDeleteBook(b.id); });
+    btns.appendChild(btnDel);
+    div.appendChild(btns);
     box.appendChild(div);
   });
 }
