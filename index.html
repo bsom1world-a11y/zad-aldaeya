@@ -242,6 +242,7 @@
           <input id="lib-search" class="inp" placeholder="ابحثي في مكتبتك الدعوية...">
           <button id="lib-btn-add-source" class="btn-primary">إضافة مصدر جديد</button>
           <button id="lib-btn-add-topic" class="btn-gold">إنشاء ملف موضوع دعوي</button>
+          <button id="lib-btn-add-book" class="btn-line">إضافة كتاب</button>
         </div>
 
         <!-- الأقسام العلمية -->
@@ -289,6 +290,130 @@
         <div class="card">
           <h3>ملفات الموضوعات الدعوية</h3>
           <div id="lib-topics-list"></div>
+        </div>
+
+        <!-- الكتب الشرعية -->
+        <div class="card">
+          <h3>الكتب الشرعية</h3>
+          <div class="toolbar" style="margin-top:0;">
+            <input id="lib-book-search" class="inp" placeholder="ابحث في الكتب..." style="width:100%; margin-bottom:10px;">
+            <select id="lib-book-section-filter" class="sel" style="width:auto;">
+              <option value="">جميع التصنيفات</option>
+              <option value="العقيدة والتوحيد">العقيدة والتوحيد</option>
+              <option value="التفسير وعلوم القرآن">التفسير وعلوم القرآن</option>
+              <option value="الحديث وعلومه">الحديث وعلومه</option>
+              <option value="الفقه والأحكام الشرعية">الفقه والأحكام الشرعية</option>
+              <option value="التربية الإيمانية والسلوك">التربية الإيمانية والسلوك</option>
+            </select>
+          </div>
+          <div id="lib-books-list"></div>
+        </div>
+      </section>
+
+      <!-- إضافة كتاب جديد -->
+      <section id="view-library-book-add" class="view hidden">
+        <button id="lib-book-add-back" class="btn-line">← رجوع للمكتبة</button>
+        <h2 class="ptitle">إضافة كتاب جديد</h2>
+        <p class="sub">أضف كتابًا من جهازك أو عبر رابط خارجي.</p>
+        <div class="card">
+          <input id="lib-book-id" type="hidden">
+          <label class="lbl" for="lib-book-title">عنوان الكتاب *</label>
+          <input id="lib-book-title" class="inp" placeholder="مثال: العقيدة الواسطية">
+
+          <label class="lbl" for="lib-book-author">اسم المؤلف</label>
+          <input id="lib-book-author" class="inp" placeholder="مثال: ابن تيمية">
+
+          <div class="grid2">
+            <div>
+              <label class="lbl" for="lib-book-classification">التصنيف العلمي</label>
+              <select id="lib-book-classification" class="sel">
+                <option>العقيدة والتوحيد</option>
+                <option>التفسير وعلوم القرآن</option>
+                <option>الحديث وعلومه</option>
+                <option>الفقه والأحكام الشرعية</option>
+                <option>التربية الإيمانية والسلوك</option>
+                <option>أقوال العلماء والفوائد العلمية</option>
+                <option>الموضوعات الدعوية المعاصرة</option>
+              </select>
+            </div>
+            <div>
+              <label class="lbl" for="lib-book-content-type">حالة توفر المحتوى</label>
+              <select id="lib-book-content-type" class="sel">
+                <option value="metadata-only">بيانات مرجعية فقط</option>
+                <option value="external-link">رابط خارجي فقط</option>
+                <option value="pdf">ملف PDF (من جهازك)</option>
+                <option value="full-text">نص كامل (مكتوب)</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="lbl" for="lib-book-description">وصف مختصر</label>
+          <textarea id="lib-book-description" class="ta" placeholder="اكتب وصفًا مختصرًا للكتاب ومضمونه..."></textarea>
+
+          <label class="lbl" for="lib-book-source-link">رابط المصدر الأصلي</label>
+          <input id="lib-book-source-link" class="inp" dir="ltr" placeholder="https://example.com/book">
+
+          <div id="lib-book-pdf-upload-group" style="margin-top:12px;">
+            <label class="lbl" for="lib-book-pdf-file">ملف PDF</label>
+            <input id="lib-book-pdf-file" type="file" accept="application/pdf">
+            <div id="lib-book-pdf-status" style="font-size:12px; color:var(--muted); margin-top:4px;">سيتم حفظ الملف في متصفحك فقط.</div>
+          </div>
+
+          <label class="lbl" for="lib-book-cover">صورة الغلاف (اختياري)</label>
+          <input id="lib-book-cover" type="file" accept="image/*">
+
+          <div class="actions-row wrap">
+            <button id="lib-btn-save-book" class="btn-primary">💾 حفظ الكتاب</button>
+            <button id="lib-btn-delete-book" class="btn-danger hidden">🗑️ حذف الكتاب</button>
+            <button id="lib-btn-cancel-book" class="btn-line">إلغاء</button>
+          </div>
+          <div id="lib-book-status"></div>
+        </div>
+      </section>
+
+      <!-- قارئ الكتب -->
+      <section id="view-library-book-reader" class="view hidden">
+        <button id="lib-book-reader-back" class="btn-line">← رجوع للكتب</button>
+        <div id="lib-reader-header" style="display:flex; gap:12px; align-items:flex-start; margin-bottom:16px;">
+          <div id="lib-reader-cover" style="width:70px; height:100px; background:#eee; border-radius:8px; flex-shrink:0;"></div>
+          <div>
+            <h2 id="lib-reader-title" class="ptitle" style="margin:0 0 4px;"></h2>
+            <p id="lib-reader-author" class="sub" style="margin:0;"></p>
+            <div id="lib-reader-meta" style="font-size:12px; color:var(--muted); margin-top:6px;"></div>
+          </div>
+        </div>
+
+        <div id="lib-reader-external" class="card hidden" style="text-align:center; padding:30px;">
+          <p>هذا الكتاب متاح عبر رابط خارجي فقط.</p>
+          <a id="lib-reader-external-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-primary">فتح المصدر الأصلي</a>
+        </div>
+
+        <div id="lib-reader-pdf" class="card hidden">
+          <div class="toolbar" style="margin-bottom:12px;">
+            <button id="lib-reader-prev-page" class="btn-line btn-sm">الصفحة السابقة</button>
+            <span id="lib-reader-page-info" style="font-size:13px; color:var(--muted);">صفحة <span id="lib-reader-current-page">1</span> من <span id="lib-reader-total-pages">1</span></span>
+            <button id="lib-reader-next-page" class="btn-line btn-sm">الصفحة التالية</button>
+            <input id="lib-reader-search" class="inp" placeholder="ابحث داخل الكتاب..." style="width:200px; margin-left:10px;">
+            <button id="lib-reader-search-btn" class="btn-line btn-sm">بحث</button>
+          </div>
+          <div id="lib-reader-canvas-container" style="text-align:center; min-height:400px;">
+            <canvas id="lib-reader-canvas"></canvas>
+          </div>
+          <div class="actions-row wrap" style="margin-top:12px;">
+            <button id="lib-reader-copy-quote" class="btn-line">نسخ الاقتباس مع رقم الصفحة</button>
+            <button id="lib-reader-add-note" class="btn-line">إضافة ملاحظة</button>
+            <button id="lib-reader-add-to-lecture" class="btn-gold">إضافة إلى محاضرة</button>
+          </div>
+          <div id="lib-reader-notes" style="margin-top:12px; max-height:200px; overflow-y:auto; background:#faf8f1; border-radius:8px; padding:10px; display:none;"></div>
+          <div id="lib-reader-status"></div>
+        </div>
+
+        <div id="lib-reader-fulltext" class="card hidden">
+          <div id="lib-reader-fulltext-content" style="line-height:2; font-size:15px; white-space:pre-wrap;"></div>
+          <div class="actions-row wrap" style="margin-top:16px;">
+            <button id="lib-reader-ft-copy" class="btn-line">نسخ الاقتباس</button>
+            <button id="lib-reader-ft-add-to-lecture" class="btn-gold">إضافة إلى محاضرة</button>
+          </div>
         </div>
       </section>
 
@@ -483,5 +608,6 @@
   window.addEventListener('offline', updateOnlineStatus);
   updateOnlineStatus();
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </body>
 </html>

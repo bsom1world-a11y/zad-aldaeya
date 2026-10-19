@@ -164,3 +164,17 @@ button, .inp, .sel{ min-height:46px; }
   .hero-title{ font-size:28px; }
   .hero-sub{ font-size:15px; }
 }
+
+/* --- library books styles --- */
+.book-cover-img{ width:70px; height:100px; object-fit:cover; border-radius:8px; flex-shrink:0; border:1px solid #e5ddc6; }
+.reader-header-flex{ display:flex; gap:12px; align-items:flex-start; margin-bottom:16px; }
+.reader-meta{ font-size:12px; color:var(--muted); margin-top:6px; }
+.reader-external-card{ text-align:center; padding:40px 20px; }
+.reader-pdf-card{ min-height:500px; }
+.reader-canvas-container{ text-align:center; min-height:400px; background:#fff; border:1px solid #e5ddc6; border-radius:10px; }
+#lib-reader-canvas{ max-width:100%; height:auto; display:block; margin:0 auto; }
+.reader-page-info{ font-size:13px; color:var(--muted); margin:0 10px; }
+.reader-actions{ margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
+.reader-notes-box{ margin-top:12px; max-height:200px; overflow-y:auto; background:#faf8f1; border-radius:8px; padding:10px; }
+.reader-fulltext{ line-height:2; font-size:15px; white-space:pre-wrap; }
+.fulltext-actions{ margin-top:16px; display:flex; gap:8px; flex-wrap:wrap; }

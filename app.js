@@ -28,11 +28,11 @@ function uid(){ return "L"+Date.now().toString(36)+Math.floor(Math.random()*9999
 function fmtDate(ts){ try{ return new Date(ts).toLocaleString("ar"); }catch(e){ return ""; } }
 
 /* ---------- التنقل ---------- */
-var crumbMap = { home:"الرئيسية", "new":"محاضرة جديدة", my:"محاضراتي", settings:"الإعدادات", editor:"عرض المحاضرة" };
+var crumbMap = { home:"الرئيسية", "new":"محاضرة جديدة", my:"محاضراتي", settings:"الإعدادات", editor:"عرض المحاضرة", library:"المكتبة الدعوية" };
 function show(view){
   var target = $("view-"+view);
   if(!target){ toast("تعذّر فتح الصفحة المطلوبة. حدّثي الصفحة بـ Ctrl+Shift+R وحاولي مجددًا."); return; }
-  ["home","new","my","settings","editor","library-source-editor","library-topic-editor","library-add-to-lecture"].forEach(function(v){ var s=$("view-"+v); if(s) s.classList.add("hidden"); });
+  ["home","new","my","settings","editor","library-source-editor","library-topic-editor","library-add-to-lecture","library-book-add","library-book-reader"].forEach(function(v){ var s=$("view-"+v); if(s) s.classList.add("hidden"); });
   target.classList.remove("hidden");
   document.querySelectorAll(".nav-item").forEach(function(b){ b.classList.toggle("active", b.dataset.view===view); });
   $("crumb").textContent = crumbMap[view]||view;
@@ -314,6 +314,7 @@ function showLibrary(){
   renderLibraryRecent();
   renderLibrarySources();
   renderLibraryTopics();
+  renderLibraryBooks();
 }
 
 function renderLibraryCategories(){
@@ -876,6 +877,7 @@ function backupAll(){
     lectures: loadLectures(),
     librarySources: loadLibrarySources(),
     libraryTopics: loadLibraryTopics(),
+    libraryBooks: loadLibraryBooks(),
     settings: loadSettings()
   };
   var blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
@@ -898,6 +900,7 @@ function restoreAll(file){
         if(data.lectures) saveLectures(data.lectures);
         if(data.librarySources) saveLibrarySources(data.librarySources);
         if(data.libraryTopics) saveLibraryTopics(data.libraryTopics);
+        if(data.libraryBooks) saveLibraryBooks(data.libraryBooks);
         if(data.settings) saveSettings(data.settings);
         toast("تم الاستعادة بنجاح ✓ — حدّثي الصفحة الآن");
         setTimeout(function(){ location.reload(); }, 1000);
@@ -917,5 +920,408 @@ $("file-restore").addEventListener("change", function(){
 });
 
 /* ---------- تهيئة ---------- */
-renderCount(); fillSettings(); renderAiStatus(); renderList(""); show("home");
+renderCount(); fillSettings(); renderAiStatus(); renderList(""); renderLibraryBooks(); show("home");
+
+/* ---------- المكتبة: الكتب ----------
+   تُحفظ بيانات الكتب في localStorage، وملفات PDF تُحفظ في IndexedDB داخل متصفحك فقط.
+*/
+var LS_LIB_BOOKS = "zad_library_books_v1";
+var IDB_NAME = "zad_library_db";
+var IDB_STORE = "book_pdfs";
+var libReaderCurrentBookId = "";
+
+function loadLibraryBooks(){
+  try{ return JSON.parse(localStorage.getItem(LS_LIB_BOOKS)||"[]"); }catch(e){ return []; }
+}
+function saveLibraryBooks(a){ localStorage.setItem(LS_LIB_BOOKS, JSON.stringify(a)); renderCount(); }
+
+function idbOpen(){
+  return new Promise(function(resolve, reject){
+    var req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = function(){ req.result.createObjectStore(IDB_STORE, {keyPath:"id"}); };
+    req.onsuccess = function(){ resolve(req.result); };
+    req.onerror = function(){ reject(req.error); };
+  });
+}
+function idbPutPdf(bookId, dataUrl){
+  return idbOpen().then(function(db){
+    return new Promise(function(res, rej){
+      var tx = db.transaction(IDB_STORE, "readwrite");
+      var store = tx.objectStore(IDB_STORE);
+      var req = store.put({id: bookId, dataUrl: dataUrl, updatedAt: Date.now()});
+      req.onsuccess = function(){ res(); db.close(); };
+      req.onerror = function(){ rej(req.error); db.close(); };
+    });
+  });
+}
+function idbGetPdf(bookId){
+  return idbOpen().then(function(db){
+    return new Promise(function(res, rej){
+      var tx = db.transaction(IDB_STORE, "readonly");
+      var store = tx.objectStore(IDB_STORE);
+      var req = store.get(bookId);
+      req.onsuccess = function(){ res(req.result ? req.result.dataUrl : null); db.close(); };
+      req.onerror = function(){ rej(req.error); db.close(); };
+    });
+  });
+}
+function idbDeletePdf(bookId){
+  return idbOpen().then(function(db){
+    return new Promise(function(res, rej){
+      var tx = db.transaction(IDB_STORE, "readwrite");
+      var store = tx.objectStore(IDB_STORE);
+      var req = store.delete(bookId);
+      req.onsuccess = function(){ res(); db.close(); };
+      req.onerror = function(){ rej(req.error); db.close(); };
+    });
+  });
+}
+
+// بيانات أولية من كتب شرعية حقيقية (بيانات مرجعية وروابط عامة معروفة فقط)
+function seedInitialBooks(){
+  var arr = loadLibraryBooks();
+  if(arr.length > 0) return arr;
+  var initial = [
+    {
+      id:"B-"+(Date.now()+1), title:"العقيدة الواسطية", author:"أحمد بن عبد الحليم بن تيمية",
+      classification:"العقيدة والتوحيد", description:"رسالة في العقيدة الإسلامية استجابة لسؤال أهل واسط.",
+      coverImage:null, sourceLink:"https://shamela.ws/", pdfDataUrl:null,
+      contentType:"metadata-only", extractedText:"", favorite:false, notes:"",
+      uploadedAt:Date.now(), updatedAt:Date.now()
+    },
+    {
+      id:"B-"+(Date.now()+2), title:"صحيح البخاري", author:"الإمام محمد بن إسماعيل البخاري",
+      classification:"الحديث وعلومه", description:"أصح كتاب بعد كتاب الله عز وجل.",
+      coverImage:null, sourceLink:"https://sunnah.com/bukhari", pdfDataUrl:null,
+      contentType:"external-link", extractedText:"", favorite:false, notes:"",
+      uploadedAt:Date.now(), updatedAt:Date.now()
+    },
+    {
+      id:"B-"+(Date.now()+3), title:"تفسير ابن كثير", author:"إسماعيل بن عمر ابن كثير",
+      classification:"التفسير وعلوم القرآن", description:"أحد أشهر وأعظم تفسيرات القرآن الكريم.",
+      coverImage:null, sourceLink:"https://quran.com/", pdfDataUrl:null,
+      contentType:"external-link", extractedText:"", favorite:false, notes:"",
+      uploadedAt:Date.now(), updatedAt:Date.now()
+    },
+    {
+      id:"B-"+(Date.now()+4), title:"رياض الصالحين", author:"الأستاذ النووي",
+      classification:"التربية الإيمانية والسلوك", description:"مجموعة منتقاة من الأحاديث النبوية في الآداب والأذكار.",
+      coverImage:null, sourceLink:"https://shamela.ws/", pdfDataUrl:null,
+      contentType:"external-link", extractedText:"", favorite:false, notes:"",
+      uploadedAt:Date.now(), updatedAt:Date.now()
+    },
+    {
+      id:"B-"+(Date.now()+5), title:"فقه السنة", author:"سيد سابق",
+      classification:"الفقه والأحكام الشرعية", description:"كتاب في الفقه الإسلامي يغطي العبادات والمعاملات.",
+      coverImage:null, sourceLink:"https://islamweb.net/", pdfDataUrl:null,
+      contentType:"external-link", extractedText:"", favorite:false, notes:"",
+      uploadedAt:Date.now(), updatedAt:Date.now()
+    }
+  ];
+  saveLibraryBooks(initial);
+  return initial;
+}
+
+function renderLibraryBooks(){
+  var box = $("lib-books-list");
+  if(!box) return;
+  var books = seedInitialBooks();
+  var q = ($("lib-book-search") && $("lib-book-search").value) ? $("lib-book-search").value.toLowerCase() : "";
+  var sec = ($("lib-book-section-filter") && $("lib-book-section-filter").value) ? $("lib-book-section-filter").value : "";
+  books = books.filter(function(b){
+    var text = (b.title + " " + (b.author||"") + " " + (b.description||"")).toLowerCase();
+    return (!q || text.includes(q)) && (!sec || b.classification === sec);
+  });
+  books.sort(function(a,b){ return (b.updatedAt||0) - (a.updatedAt||0); });
+  if(!books.length){ box.innerHTML = '<div class="empty">لا توجد كتب في هذا القسم بعد. أضيفي كتابًا جديدًا لتبدأ.</div>'; return; }
+  box.innerHTML = "";
+  books.forEach(function(b){
+    var typeLabel = { "metadata-only":"بيانات مرجعية", "external-link":"رابط خارجي", "pdf":"ملف PDF", "full-text":"نص كامل" }[b.contentType] || b.contentType;
+    var div = document.createElement("div");
+    div.className = "library-item";
+    div.innerHTML =
+      '<div><h4>'+esc(b.title)+'</h4><div class="source-meta">'+esc(b.author||"مؤلف غير محدد")+' • '+esc(b.classification)+'</div>' +
+      '<div class="source-meta" style="font-size:11.5px; color:var(--muted);">'+typeLabel+'</div>' +
+      (b.description?'<div class="source-body">'+esc(b.description)+'</div>':'') +
+      '</div>' +
+      '<div class="row-btns">' +
+      '<span class="fav-star '+(b.favorite?"filled":"")+'" title="المفضلة" onclick="libToggleFavBook(\''+b.id+'\')">'+(b.favorite?"★":"☆")+'</span>' +
+      '<button class="btn-line btn-sm" onclick="libOpenBook(\''+b.id+'\')">'+(b.contentType==="external-link"?"فتح المصدر":"قراءة")+'</button>' +
+      '<button class="btn-line btn-sm" onclick="libEditBook(\''+b.id+'\')">تعديل</button>' +
+      '<button class="btn-danger btn-sm" onclick="libDeleteBook(\''+b.id+'\')">حذف</button>' +
+      '</div>';
+    box.appendChild(div);
+  });
+}
+
+function libOpenBook(id){
+  var books = loadLibraryBooks();
+  var b = books.find(function(x){ return x.id === id; });
+  if(!b) return;
+  libReaderCurrentBookId = id;
+  $("view-library").classList.add("hidden");
+  $("view-library-book-reader").classList.remove("hidden");
+  $("lib-reader-title").textContent = b.title;
+  $("lib-reader-author").textContent = b.author || "مؤلف غير محدد";
+  var typeLabel = { "metadata-only":"بيانات مرجعية", "external-link":"رابط خارجي", "pdf":"ملف PDF", "full-text":"نص كامل" }[b.contentType] || b.contentType;
+  $("lib-reader-meta").textContent = b.classification + " • " + typeLabel;
+
+  if(b.contentType === "external-link"){
+    $("lib-reader-external").classList.remove("hidden");
+    $("lib-reader-pdf").classList.add("hidden");
+    $("lib-reader-fulltext").classList.add("hidden");
+    $("lib-reader-external-link").href = b.sourceLink || "#";
+    $("lib-reader-external-link").textContent = b.sourceLink ? "فتح المصدر الأصلي: " + b.sourceLink : "الرابط غير متوفر";
+    window.scrollTo(0,0);
+    return;
+  }
+  if(b.contentType === "pdf"){
+    $("lib-reader-external").classList.add("hidden");
+    $("lib-reader-pdf").classList.remove("hidden");
+    $("lib-reader-fulltext").classList.add("hidden");
+    libRenderPdf(b);
+    window.scrollTo(0,0);
+    return;
+  }
+  if(b.contentType === "full-text"){
+    $("lib-reader-external").classList.add("hidden");
+    $("lib-reader-pdf").classList.add("hidden");
+    $("lib-reader-fulltext").classList.remove("hidden");
+    $("lib-reader-fulltext-content").textContent = b.extractedText || "";
+    window.scrollTo(0,0);
+    return;
+  }
+  $("lib-reader-external").classList.remove("hidden");
+  $("lib-reader-pdf").classList.add("hidden");
+  $("lib-reader-fulltext").classList.add("hidden");
+  if(b.sourceLink){
+    $("lib-reader-external-link").href = b.sourceLink;
+    $("lib-reader-external-link").textContent = "فتح المصدر الأصلي: " + b.sourceLink;
+    $("lib-reader-external-link").classList.remove("hidden");
+  } else {
+    $("lib-reader-external-link").classList.add("hidden");
+  }
+  window.scrollTo(0,0);
+}
+
+var pdfState = { doc: null, pageNum: 1, totalPages: 0, scale: 1.2 };
+
+function libRenderPdf(b){
+  $("lib-reader-canvas").style.display = "none";
+  idbGetPdf(b.id).then(function(dataUrl){
+    if(!dataUrl){
+      $("lib-reader-status").innerHTML = '<div class="status-err">ملف PDF غير موجود في التخزين المحلي.</div>';
+      return;
+    }
+    if(typeof pdfjsLib === "undefined"){
+      $("lib-reader-status").innerHTML = '<div class="status-err">مكتبة PDF.js غير محملة.</div>';
+      return;
+    }
+    var loadingTask = pdfjsLib.getDocument({ data: dataUrl });
+    loadingTask.promise.then(function(doc){
+      pdfState.doc = doc;
+      pdfState.totalPages = doc.numPages;
+      pdfState.pageNum = 1;
+      $("lib-reader-total-pages").textContent = doc.numPages;
+      renderPdfPage(1);
+    }).catch(function(err){
+      $("lib-reader-status").innerHTML = '<div class="status-err">فشل تحميل ملف PDF: '+esc(err.message)+'</div>';
+    });
+  });
+}
+
+function renderPdfPage(num){
+  if(!pdfState.doc) return;
+  pdfState.doc.getPage(num).then(function(page){
+    var viewport = page.getViewport({scale: pdfState.scale});
+    var canvas = $("lib-reader-canvas");
+    var context = canvas.getContext('2d');
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    canvas.style.display = "block";
+    var renderContext = { canvasContext: context, viewport: viewport };
+    page.render(renderContext).promise.then(function(){
+      $("lib-reader-current-page").textContent = num;
+      $("lib-reader-page-info").textContent = "صفحة " + num + " من " + pdfState.totalPages;
+      page.getTextContent().then(function(textContent){
+        pdfState.currentPageText = textContent.items.map(function(item){ return item.str; }).join(" ");
+      });
+    });
+  });
+}
+
+$("lib-reader-prev-page").addEventListener("click", function(){
+  if(pdfState.pageNum > 1){ pdfState.pageNum--; renderPdfPage(pdfState.pageNum); }
+});
+$("lib-reader-next-page").addEventListener("click", function(){
+  if(pdfState.pageNum < pdfState.totalPages){ pdfState.pageNum++; renderPdfPage(pdfState.pageNum); }
+});
+$("lib-reader-search-btn").addEventListener("click", function(){
+  var q = $("lib-reader-search").value.trim().toLowerCase();
+  if(!q || !pdfState.currentPageText) return;
+  if(pdfState.currentPageText.toLowerCase().includes(q)){
+    $("lib-reader-status").innerHTML = '<div class="status-ok">تم العثور على المصطلح في الصفحة الحالية ✓</div>';
+  } else {
+    $("lib-reader-status").innerHTML = '<div class="status-warn">لم يتم العثور على المصطلح في الصفحة الحالية.</div>';
+  }
+});
+
+function libOpenBookEditor(id){
+  $("view-library").classList.add("hidden");
+  $("view-library-book-add").classList.remove("hidden");
+  $("lib-book-id").value = id || "";
+  $("lib-book-title").value = "";
+  $("lib-book-author").value = "";
+  $("lib-book-classification").value = "الفقه والأحكام الشرعية";
+  $("lib-book-content-type").value = "metadata-only";
+  $("lib-book-description").value = "";
+  $("lib-book-source-link").value = "";
+  $("lib-book-pdf-file").value = "";
+  $("lib-book-cover").value = "";
+  $("lib-book-pdf-upload-group").style.display = "none";
+  $("lib-btn-delete-book").classList.toggle("hidden", !id);
+  $("lib-book-status").innerHTML = "";
+  if(id){
+    var b = loadLibraryBooks().find(function(x){ return x.id === id; });
+    if(b){
+      $("lib-book-title").value = b.title || "";
+      $("lib-book-author").value = b.author || "";
+      $("lib-book-classification").value = b.classification || "الفقه والأحكام الشرعية";
+      $("lib-book-content-type").value = b.contentType || "metadata-only";
+      $("lib-book-description").value = b.description || "";
+      $("lib-book-source-link").value = b.sourceLink || "";
+      if(b.contentType === "pdf") $("lib-book-pdf-upload-group").style.display = "block";
+    }
+  }
+  window.scrollTo(0,0);
+}
+
+function libSaveBook(){
+  var id = $("lib-book-id").value.trim();
+  var title = $("lib-book-title").value.trim();
+  if(!title){ $("lib-book-status").innerHTML = '<div class="status-err"> فضلًا أدخل عنوان الكتاب.</div>'; return; }
+  var contentType = $("lib-book-content-type").value;
+  var b = {
+    id: id || "B-"+Date.now(),
+    title: title,
+    author: $("lib-book-author").value.trim(),
+    classification: $("lib-book-classification").value,
+    description: $("lib-book-description").value.trim(),
+    coverImage: null,
+    sourceLink: $("lib-book-source-link").value.trim(),
+    pdfDataUrl: null,
+    contentType: contentType,
+    extractedText: "",
+    favorite: id ? (loadLibraryBooks().find(function(x){ return x.id === id; })||{}).favorite : false,
+    notes: id ? (loadLibraryBooks().find(function(x){ return x.id === id; })||{}).notes : "",
+    uploadedAt: id ? (loadLibraryBooks().find(function(x){ return x.id === id; })||{}).uploadedAt : Date.now(),
+    updatedAt: Date.now()
+  };
+
+  var fileInput = $("lib-book-pdf-file");
+  if(fileInput && fileInput.files && fileInput.files[0]){
+    var file = fileInput.files[0];
+    var reader = new FileReader();
+    reader.onload = function(e){
+      b.pdfDataUrl = e.target.result;
+      b.contentType = "pdf";
+      saveBookFinal(b);
+    };
+    reader.readAsDataURL(file);
+  } else {
+    saveBookFinal(b);
+  }
+}
+
+function saveBookFinal(b){
+  var arr = loadLibraryBooks();
+  var idx = arr.findIndex(function(x){ return x.id === b.id; });
+  if(idx >= 0) arr[idx] = b; else arr.push(b);
+  saveLibraryBooks(arr);
+  renderLibraryBooks();
+  showLibrary();
+  toast("تم حفظ الكتاب ✓");
+}
+
+function libDeleteBook(id){
+  if(!confirm("هل أنت متأكدة من حذف هذا الكتاب؟")) return;
+  var arr = loadLibraryBooks().filter(function(x){ return x.id !== id; });
+  saveLibraryBooks(arr);
+  idbDeletePdf(id);
+  renderLibraryBooks();
+  toast("تم حذف الكتاب ✓");
+}
+
+function libEditBook(id){ libOpenBookEditor(id); }
+function libToggleFavBook(id){
+  var arr = loadLibraryBooks();
+  var b = arr.find(function(x){ return x.id === id; });
+  if(b){ b.favorite = !b.favorite; saveLibraryBooks(arr); renderLibraryBooks(); }
+}
+
+function libAddBookToLecture(bookId){
+  var books = loadLibraryBooks();
+  var b = books.find(function(x){ return x.id === bookId; });
+  if(!b) return;
+  var arr = loadLectures();
+  if(arr.length === 0){
+    toast("لا توجد محاضرات لإضافة الكتاب إليها. أنشئي محاضرة أولاً.");
+    return;
+  }
+  var lecture = arr[0];
+  var content = "\n\n--- من مكتبة الكتب: " + esc(b.title) + " ---\n";
+  content += "المؤلف: " + esc(b.author||"غير محدد") + "\n";
+  content += "التصنيف: " + esc(b.classification) + "\n";
+  if(b.description) content += "الوصف: " + esc(b.description) + "\n";
+  if(b.sourceLink) content += "المصدر: " + esc(b.sourceLink) + "\n";
+  content += "⚠️ يرجى مراجعة محتوى الكتاب والتأكد من صحته قبل الإلقاء.\n";
+  lecture.body = (lecture.body||"") + content;
+  lecture.updatedAt = Date.now();
+  saveLectures(arr);
+  showLibrary();
+  toast("تمت إضافة الكتاب إلى محاضرة: " + esc(lecture.title) + " ✓");
+}
+
+function libCreateLectureFromBook(bookId){
+  var books = loadLibraryBooks();
+  var b = books.find(function(x){ return x.id === bookId; });
+  if(!b) return;
+  var content = "عنوان المحاضرة: " + esc(b.title) + "\n";
+  content += "المؤلف: " + esc(b.author||"غير محدد") + "\n";
+  content += "التصنيف: " + esc(b.classification) + "\n";
+  if(b.description) content += "وصف الكتاب: " + esc(b.description) + "\n";
+  if(b.sourceLink) content += "المصدر: " + esc(b.sourceLink) + "\n\n";
+  content += "⚠️ يرجى مراجعة محتوى الكتاب والتأكد من صحته قبل الإلقاء.\n";
+  var newItem = {
+    id: uid(), title: b.title, audience: "عامة الناس", duration: "30", type: "محاضرة", style: "علمي تأصيلي",
+    notes: "", body: content, brief: "", createdAt: Date.now(), updatedAt: Date.now(), needsReview: true
+  };
+  var arr = loadLectures();
+  arr.unshift(newItem);
+  saveLectures(arr);
+  showLibrary();
+  toast("تم إنشاء مسودة محاضرة جديدة من الكتاب ✓");
+}
+
+on("lib-btn-add-book", function(){ libOpenBookEditor(null); });
+on("lib-book-add-back", showLibrary);
+on("lib-book-reader-back", function(){
+  $("view-library-book-reader").classList.add("hidden");
+  $("view-library").classList.remove("hidden");
+  renderLibraryBooks();
+});
+on("lib-btn-save-book", libSaveBook);
+on("lib-btn-cancel-book", showLibrary);
+on("lib-btn-delete-book", function(){
+  if($("lib-book-id").value) libDeleteBook($("lib-book-id").value);
+});
+$("lib-book-content-type").addEventListener("change", function(){
+  $("lib-book-pdf-upload-group").style.display = this.value === "pdf" ? "block" : "none";
+});
+on("lib-reader-add-to-lecture", function(){
+  if(libReaderCurrentBookId) libAddBookToLecture(libReaderCurrentBookId);
+});
+on("lib-reader-ft-add-to-lecture", function(){
+  if(libReaderCurrentBookId) libAddBookToLecture(libReaderCurrentBookId);
+});
 })();
